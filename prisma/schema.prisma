@@ -1,0 +1,225 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url      = env("DATABASE_URL")
+}
+
+model Post {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    createdBy   User   @relation(fields: [createdById], references: [id])
+    createdById String
+
+    @@index([name])
+}
+
+// Necessary for Next auth
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String? @db.Text
+    access_token             String? // @db.Text
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String? // @db.Text
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    role          String?   @default("USER")
+    password      String?   @db.Text // For admin-brukere som logger inn med e-post/passord
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+    isAdmin       Boolean   @default(false)
+    accounts      Account[]
+    sessions      Session[]
+    posts         Post[]
+    weightMeasurements WeightMeasurement[]
+    handledReports    Report[] @relation("ReportHandler")
+    createdReports    Report[] @relation("ReportCreator")
+
+    Declaration Declaration[]
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+enum Role {
+    ADMIN
+    USER
+    TEKNISK
+    VEKTREG
+    INNSJEKK
+    POWERLOG
+}
+
+enum DeclarationClass {
+  // GT-klasser som krever selvangivelse
+  GT5
+  GT4
+  GT3
+  GT1
+  GT_PLUS
+  // Andre klasser som ikke krever selvangivelse
+  OTHER
+}
+
+model Declaration {
+    id              String            @id @default(cuid())
+    startNumber     String
+    declaredClass   DeclarationClass
+    declaredWeight  Float?
+    declaredPower   Float?
+    isTurbo         Boolean          @default(false)
+    isActive        Boolean          @default(true)
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+    carId           String
+    car             Car              @relation(fields: [carId], references: [id])
+    weightMeasurements WeightMeasurement[]
+    weightAdditions WeightAddition[]
+    powerlogs       Powerlog[]
+    reports         Report[]
+    userId          String?
+    user            User?            @relation(fields: [userId], references: [id])
+
+    @@index([carId])
+    @@index([userId])
+}
+
+model WeightAddition {
+    id            String     @id @default(cuid())
+    additionId    String     // Referanse til konfigurasjonen
+    weight        Int        // Lagret vekt for denne tilleggsvekten
+    declarationId String
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+
+    @@index([declarationId])
+}
+
+model Car {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    
+    // Bilinformasjon
+    make          String
+    model         String
+    year          Int
+    registration  String?  // Fjernet @unique midlertidig
+    
+    // Relasjoner
+    declarations  Declaration[]
+    weightMeasurements WeightMeasurement[]
+    
+    @@index([registration])
+}
+
+model Powerlog {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    
+    // Heat og vektinformasjon
+    heatNumber    String   // "Trening", "Kval", "Finale 1", "Finale 2", "Finale 3", "Finale 4"
+    weight        Float
+    boxId         String
+    nullPoint     Float
+    measuredPower Float?   // Nytt felt for målt effekt
+    
+    // Relasjoner
+    weightMeasurements WeightMeasurement[]
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+    declarationId String
+    
+    @@index([declarationId])
+    @@index([boxId])
+}
+
+model WeightMeasurement {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    declarationId String
+    carId         String
+    measuredWeight Float
+    nullPoint     Float    @default(0)
+    powerlogId    String?
+    measuredById  String
+    heat          String?  // Nytt felt for heat (Trening, Kval, Finale 1, 2, 3, 4)
+    metadata      String?  @db.Text  // Lagrer historiske data som JSON
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+    car           Car      @relation(fields: [carId], references: [id])
+    measuredBy    User     @relation(fields: [measuredById], references: [id])
+    powerlog      Powerlog? @relation(fields: [powerlogId], references: [id])
+
+    @@index([declarationId])
+    @@index([carId])
+    @@index([measuredById])
+    @@index([powerlogId])
+}
+
+model Report {
+    id            String   @id @default(cuid())
+    type          String   // "weight", "power", "technical"
+    status        String   // "pending", "resolved", "rejected"
+    details       String   @db.Text  // Lagret som tekst, konverteres til JSON i applikasjonskoden
+    
+    // Relasjoner
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+    declarationId String
+    
+    // Hvem som håndterer rapporten
+    handledBy     User?     @relation("ReportHandler", fields: [handledById], references: [id])
+    handledById   String?
+    
+    // Hvem som opprettet rapporten
+    createdBy     User     @relation("ReportCreator", fields: [createdById], references: [id])
+    createdById   String
+
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    @@index([declarationId])
+    @@index([handledById])
+    @@index([createdById])
+}

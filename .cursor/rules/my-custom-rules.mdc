@@ -1,0 +1,73 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+# Koderegler for Cursor
+
+## Hovedprinsipper
+- **Prosjektintegritet**: Prioriter konsistens med eksisterende kodebase.
+- **Minimalisme**: Introduser bare ny kode når det er absolutt nødvendig.
+- **Stabilitet**: Prioriter pålitelige løsninger fremfor eksperimentelle tilnærminger.
+
+## Detaljerte regler
+
+### 1. Prosjektanalyse
+- Scan og analyser hele prosjektet før nye endringer foreslås.
+- Identifiser eksisterende mønstre, konvensjoner og arkitektur.
+- Kartlegg avhengigheter mellom moduler og komponenter.
+
+### 2. Kodedualisering
+- Sjekk alltid om det finnes eksisterende funksjonalitet før nye løsninger foreslås.
+- Hvis lignende funksjonalitet eksisterer, prioriter refaktorering/gjenbruk fremfor å skape duplikat.
+- Hold en oppdatert oversikt over kjernefunksjonalitet i prosjektet.
+
+### 3. Konsistensregler
+- Følg eksisterende navnekonvensjoner (camelCase, snake_case, etc.).
+- Bruk samme kodestil som resten av prosjektet (innrykk, linjeskift, etc.).
+- Bruk konsistente designmønstre som allerede er etablert i prosjektet.
+- Behold samme språkversjon og bibliotekversjoner.
+
+### 4. Avhengighetskontroll
+- Introduser ikke nye avhengigheter hvis eksisterende biblioteker kan brukes.
+- Sjekk kompatibilitet med eksisterende avhengigheter før nye foreslås.
+- Unngå å foreslå løsninger som krever omfattende oppgradering av eksisterende avhengigheter.
+
+### 5. Refaktorering versus nyutvikling
+- Prioriter refaktorering av eksisterende kode fremfor å skrive ny kode.
+- Følg DRY-prinsippet (Don't Repeat Yourself) ved å identifisere muligheter for gjenbruk.
+- Foreslå bare nyutvikling når eksisterende løsninger ikke kan tilpasses.
+
+### 6. Feilhåndtering
+- Behold eksisterende feilhåndteringsmønstre.
+- Sikre at all ny kode har robust feilhåndtering som samsvarer med resten av prosjektet.
+- Implementer defensive programmeringsteknikker.
+
+### 7. Testbarhet
+- All ny kode bør være testbar og ideelt sett inkludere tester.
+- Følg eksisterende teststrategi og testverktøy.
+- Ikke bryt eksisterende tester ved å endre API-kontrakter.
+
+### 8. Dokumentasjon
+- All ny kode skal dokumenteres i samme format/stil som eksisterende kode.
+- Oppdater eksisterende dokumentasjon ved endringer.
+- Dokumenter tydelig alle avvik fra eksisterende mønstre hvis slike avvik er nødvendige.
+
+### 9. Ytelse og skalering
+- Nye løsninger skal ikke svekke ytelse eller skalerbarhet.
+- Vurder ressursbruk og kompleksitet før nye tilnærminger foreslås.
+- Følg eksisterende ytelsesoptimaliseringsmønstre.
+
+### 10. Inkrementell implementering
+- Foreslå stegvise endringer fremfor omfattende omskrivninger.
+- Del komplekse løsninger inn i håndterbare, testbare deler.
+- Sikre at hver inkrementell endring etterlater prosjektet i en fungerende tilstand.
+
+## Implementeringsstrategi
+1. Implementer disse reglene som en konfigurasjonsfil for Cursor.
+2. Bruk statisk analyseverktøy for å validere at nye forslag følger reglene.
+3. Sett opp en pre-commit hook som sjekker mot disse reglene.
+4. Revider reglene regelmessig basert på prosjektets utvikling.
