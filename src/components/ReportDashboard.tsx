@@ -65,65 +65,71 @@ const styles = StyleSheet.create({
 });
 
 // PDF-rapport komponent
-const ReportPDF = ({ report, details }: { report: any; details: ReportDetails }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <View>
-        <Text style={styles.header}>Teknisk Rapport</Text>
-        
-        <View style={styles.section}>
-          <Text style={styles.title}>Bilinformasjon</Text>
-          <Text style={styles.text}>Bil: {details.carInfo}</Text>
-          <Text style={styles.text}>Startnummer: {details.startNumber}</Text>
-        </View>
+const ReportPDF = ({ report, details }: { report: any; details: ReportDetails }) => {
+  const weightOutside = ((details.measuredWeight / details.ratio) - (details.measuredWeight / details.requiredRatio)) * details.requiredRatio;
+  
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View>
+          <Text style={styles.header}>Teknisk Rapport</Text>
+          
+          <View style={styles.section}>
+            <Text style={styles.title}>Bilinformasjon</Text>
+            <Text style={styles.text}>Bil: {details.carInfo}</Text>
+            <Text style={styles.text}>Startnummer: {details.startNumber}</Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.title}>Målinger</Text>
-          <Text style={styles.text}>Målt vekt: {details.measuredWeight} kg</Text>
-          <Text style={styles.text}>Deklarert effekt: {details.declaredPower} hk</Text>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.title}>Målinger</Text>
+            <Text style={styles.text}>Målt vekt: {details.measuredWeight} kg</Text>
+            <Text style={styles.text}>Deklarert effekt: {details.declaredPower} hk</Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.title}>Vekt/Effekt-forhold</Text>
-          <View style={styles.table}>
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.bold]}>Parameter</Text>
-              <Text style={[styles.tableCell, styles.bold]}>Verdi</Text>
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Faktisk forhold</Text>
-              <Text style={styles.tableCell}>{details.ratio.toFixed(2)} kg/hk</Text>
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Krav</Text>
-              <Text style={styles.tableCell}>{details.requiredRatio.toFixed(2)} kg/hk</Text>
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Prosent av grense</Text>
-              <Text style={styles.tableCell}>{((details.ratio / details.requiredRatio) * 100).toFixed(1)}%</Text>
+          <View style={styles.section}>
+            <Text style={styles.title}>Vekt/Effekt-forhold</Text>
+            <View style={styles.table}>
+              <View style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.bold]}>Parameter</Text>
+                <Text style={[styles.tableCell, styles.bold]}>Verdi</Text>
+              </View>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableCell}>Faktisk forhold</Text>
+                <Text style={styles.tableCell}>{details.ratio.toFixed(2)} kg/hk</Text>
+              </View>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableCell}>Krav</Text>
+                <Text style={styles.tableCell}>{details.requiredRatio.toFixed(2)} kg/hk</Text>
+              </View>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableCell}>Vekt utenfor</Text>
+                <Text style={styles.tableCell}>
+                  {weightOutside.toFixed(2)} kg
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.title}>Utregning</Text>
-          <Text style={styles.text}>
-            Vekt/Effekt-forhold = Målt vekt / Deklarert effekt
-          </Text>
-          <Text style={styles.text}>
-            {details.measuredWeight} kg / {details.declaredPower} hk = {details.ratio.toFixed(2)} kg/hk
-          </Text>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.title}>Utregning</Text>
+            <Text style={styles.text}>
+              Vekt utenfor = (Målt vekt / Faktisk forhold - Målt vekt / Krav) * Krav
+            </Text>
+            <Text style={styles.text}>
+              ({details.measuredWeight} / {details.ratio.toFixed(2)} - {details.measuredWeight} / {details.requiredRatio.toFixed(2)}) * {details.requiredRatio.toFixed(2)} = {weightOutside.toFixed(2)} kg
+            </Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.text}>
-            Rapport generert: {format(new Date(report.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
-          </Text>
+          <View style={styles.section}>
+            <Text style={styles.text}>
+              Rapport generert: {format(new Date(report.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
+            </Text>
+          </View>
         </View>
-      </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};
 
 export default function ReportDashboard() {
   const { data: session, status } = useSession();
@@ -132,7 +138,10 @@ export default function ReportDashboard() {
   const [error, setError] = useState<string | null>(null);
   const utils = api.useUtils();
 
-  const { data: reports, isLoading } = api.report.getAll.useQuery();
+  const { data: reports, isLoading } = api.report.getAll.useQuery(undefined, {
+    refetchInterval: 5000, // Oppdater hvert 5. sekund
+    refetchOnWindowFocus: true, // Oppdater når vinduet får fokus
+  });
 
   const updateStatus = api.report.updateStatus.useMutation({
     onSuccess: () => {
@@ -255,16 +264,33 @@ export default function ReportDashboard() {
                   }
 
                   const isUnderLimit = details.ratio < details.requiredRatio;
-                  const ratioPercentage = ((details.ratio / details.requiredRatio) * 100).toFixed(1);
+                  const weightOutside = ((details.measuredWeight / details.ratio) - (details.measuredWeight / details.requiredRatio)) * details.requiredRatio;
 
                   return (
                     <li key={report.id} className="px-4 py-4 sm:px-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
-                              {report.type === "WEIGHT_POWER_RATIO" && "Vekt/Effekt-ratio utenfor grenser"}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-gray-900">
+                                {report.type === "WEIGHT_POWER_RATIO" && "Vekt/Effekt-ratio utenfor grenser"}
+                              </p>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  report.source === "WEIGHT"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : report.source === "POWERLOG"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {report.source === "WEIGHT"
+                                  ? "Vektreg"
+                                  : report.source === "POWERLOG"
+                                  ? "Powerlog"
+                                  : "Ukjent"}
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-500">
                               Opprettet: {format(new Date(report.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                             </p>
@@ -292,7 +318,7 @@ export default function ReportDashboard() {
                                     <div className={`mt-1 p-2 rounded ${isUnderLimit ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
                                       <p>Faktisk: <span className="font-bold">{details.ratio.toFixed(2)} kg/hk</span></p>
                                       <p>Krav: <span className="font-bold">{details.requiredRatio.toFixed(2)} kg/hk</span></p>
-                                      <p className="text-sm mt-1">({ratioPercentage}% av grensen)</p>
+                                      <p className="text-sm mt-1">Vekt utenfor: <span className="font-bold">{weightOutside.toFixed(2)} kg</span></p>
                                     </div>
                                   </div>
                                 </div>

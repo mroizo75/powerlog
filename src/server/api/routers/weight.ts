@@ -109,22 +109,38 @@ export const weightRouter = createTRPCRouter({
 
       // Hvis vekt/effekt-ratio er under grensen, generer en rapport
       if (!isWithinLimit) {
-        await ctx.db.report.create({
-          data: {
+        // Sjekk om det allerede finnes en rapport for denne bilen og målingen
+        const existingReport = await ctx.db.report.findFirst({
+          where: {
+            declarationId: input.declarationId,
             type: "WEIGHT_POWER_RATIO",
             status: "pending",
-            details: JSON.stringify({
-              measuredWeight: input.measuredWeight,
-              declaredPower: declaration.declaredPower,
-              ratio: weightPowerRatio,
-              requiredRatio,
-              carInfo: `${declaration.car.make} ${declaration.car.model} (${declaration.car.year})`,
-              startNumber: declaration.startNumber,
-            }),
-            declarationId: input.declarationId,
-            createdById: ctx.session.user.id,
+            createdAt: {
+              gte: new Date(Date.now() - 1000 * 60 * 5), // Sjekk rapporter fra de siste 5 minuttene
+            },
           },
         });
+
+        // Hvis det ikke finnes en eksisterende rapport, opprett en ny
+        if (!existingReport) {
+          await ctx.db.report.create({
+            data: {
+              type: "WEIGHT_POWER_RATIO",
+              status: "pending",
+              source: "WEIGHT",
+              details: JSON.stringify({
+                measuredWeight: input.measuredWeight,
+                declaredPower: declaration.declaredPower,
+                ratio: weightPowerRatio,
+                requiredRatio,
+                carInfo: `${declaration.car.make} ${declaration.car.model} (${declaration.car.year})`,
+                startNumber: declaration.startNumber,
+              }),
+              declarationId: input.declarationId,
+              createdById: ctx.session.user.id,
+            },
+          });
+        }
       }
 
       return measurement;
@@ -151,6 +167,7 @@ export const weightRouter = createTRPCRouter({
         include: {
           measuredBy: true,
           declaration: true,
+          powerlog: true,
         },
         orderBy: { createdAt: "desc" },
       });

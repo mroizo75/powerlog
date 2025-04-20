@@ -31,6 +31,7 @@ const declarationSchema = z.object({
   declaredWeight: z.number().optional(),
   declaredPower: z.number().optional(),
   isTurbo: z.boolean().optional(),
+  email: z.string().email().optional(),
   car: carSchema,
   weightAdditions: z.array(z.string()).optional(),
 });
@@ -38,7 +39,29 @@ const declarationSchema = z.object({
 export const declarationRouter = createTRPCRouter({
   // Send inn ny selvangivelse
   submit: publicProcedure
-    .input(declarationSchema)
+    .input(
+      z.object({
+        startNumber: z.string(),
+        email: z.string().email({ message: "Ugyldig e-postadresse" }),
+        car: z.object({
+          make: z.string().min(1, { message: "Bilmerke er påkrevd" }),
+          model: z.string().min(1, { message: "Bilmodell er påkrevd" }),
+          year: z.number().min(1900).max(new Date().getFullYear()),
+        }),
+        declaredWeight: z.number().min(0),
+        declaredPower: z.number().min(0),
+        declaredClass: z.enum([
+          "GT5",
+          "GT4",
+          "GT3",
+          "GT1",
+          "GT_PLUS",
+          "OTHER",
+        ]),
+        weightAdditions: z.array(z.string()),
+        isTurbo: z.boolean(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // Finn eller opprett bil basert på registreringsnummer
       let car;
@@ -106,6 +129,23 @@ export const declarationRouter = createTRPCRouter({
             },
           });
 
+          // Send e-postkvittering hvis e-postadresse er oppgitt
+          if (input.email) {
+            try {
+              await ctx.emailService.sendDeclarationReceipt({
+                to: input.email,
+                startNumber: input.startNumber,
+                carInfo: `${input.car.make} ${input.car.model} (${input.car.year})`,
+                declaredClass: input.declaredClass,
+                declaredWeight: input.declaredWeight ?? 0,
+                declaredPower: input.declaredPower ?? 0,
+              });
+            } catch (error) {
+              console.error("Feil ved sending av e-postkvittering:", error);
+              // Fortsett selv om e-post-sending feiler
+            }
+          }
+
           return declaration;
         }
 
@@ -113,23 +153,41 @@ export const declarationRouter = createTRPCRouter({
         const declaration = await ctx.db.declaration.create({
           data: {
             startNumber: input.startNumber,
+            email: input.email,
             declaredClass: input.declaredClass,
             declaredWeight: input.declaredWeight ?? 0,
             declaredPower: input.declaredPower ?? 0,
             isTurbo: input.isTurbo ?? false,
-            carId: car.id,
             weightAdditions: {
               create: input.weightAdditions?.map(additionId => ({
                 additionId,
                 weight: WEIGHT_ADDITIONS[input.declaredClass]?.find((a: { id: string; weight: number }) => a.id === additionId)?.weight ?? 0,
               })) ?? [],
             },
+            carId: car.id,
           },
           include: {
             car: true,
             weightAdditions: true,
           },
         });
+
+        // Send e-postkvittering for OTHER-klasse
+        if (input.email) {
+          try {
+            await ctx.emailService.sendDeclarationReceipt({
+              to: input.email,
+              startNumber: input.startNumber,
+              carInfo: `${input.car.make} ${input.car.model} (${input.car.year})`,
+              declaredClass: input.declaredClass,
+              declaredWeight: input.declaredWeight ?? 0,
+              declaredPower: input.declaredPower ?? 0,
+            });
+          } catch (error) {
+            console.error("Feil ved sending av e-postkvittering:", error);
+            // Fortsett selv om e-post-sending feiler
+          }
+        }
 
         return declaration;
       }
@@ -138,23 +196,41 @@ export const declarationRouter = createTRPCRouter({
       const declaration = await ctx.db.declaration.create({
         data: {
           startNumber: input.startNumber,
+          email: input.email,
           declaredClass: input.declaredClass,
           declaredWeight: input.declaredWeight ?? 0,
           declaredPower: input.declaredPower ?? 0,
           isTurbo: input.isTurbo ?? false,
-          carId: car.id,
           weightAdditions: {
             create: input.weightAdditions?.map(additionId => ({
               additionId,
               weight: WEIGHT_ADDITIONS[input.declaredClass]?.find((a: { id: string; weight: number }) => a.id === additionId)?.weight ?? 0,
             })) ?? [],
           },
+          carId: car.id,
         },
         include: {
           car: true,
           weightAdditions: true,
         },
       });
+
+      // Send e-postkvittering for OTHER-klasse
+      if (input.email) {
+        try {
+          await ctx.emailService.sendDeclarationReceipt({
+            to: input.email,
+            startNumber: input.startNumber,
+            carInfo: `${input.car.make} ${input.car.model} (${input.car.year})`,
+            declaredClass: input.declaredClass,
+            declaredWeight: input.declaredWeight ?? 0,
+            declaredPower: input.declaredPower ?? 0,
+          });
+        } catch (error) {
+          console.error("Feil ved sending av e-postkvittering:", error);
+          // Fortsett selv om e-post-sending feiler
+        }
+      }
 
       // Invalider spørringer
       await ctx.db.$transaction(async (tx) => {

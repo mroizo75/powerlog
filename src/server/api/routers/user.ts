@@ -9,7 +9,8 @@ export const userRouter = createTRPCRouter({
       z.object({
         email: z.string().email(),
         password: z.string().min(8),
-        role: z.enum(["ADMIN", "USER"]),
+        name: z.string().min(2),
+        role: z.enum(["ADMIN", "USER", "TEKNISK", "VEKTREG", "INNSJEKK", "POWERLOG"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -41,6 +42,7 @@ export const userRouter = createTRPCRouter({
         data: {
           email: input.email,
           password: hashedPassword,
+          name: input.name,
           role: input.role,
         },
       });
@@ -61,6 +63,7 @@ export const userRouter = createTRPCRouter({
       select: {
         id: true,
         email: true,
+        name: true,
         role: true,
       },
       orderBy: {
@@ -76,6 +79,8 @@ export const userRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         email: z.string().email(),
+        name: z.string().min(2),
+        role: z.enum(["ADMIN", "USER", "TEKNISK", "VEKTREG", "INNSJEKK", "POWERLOG"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -108,6 +113,8 @@ export const userRouter = createTRPCRouter({
         where: { id: input.id },
         data: {
           email: input.email,
+          name: input.name,
+          role: input.role,
         },
       });
 

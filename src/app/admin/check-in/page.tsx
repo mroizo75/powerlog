@@ -5,20 +5,27 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/components/AdminNav";
 import DeclarationCheck from "@/components/DeclarationCheck";
+import { api } from "@/trpc/react";
 
 export default function CheckInPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // Hent deklarasjoner med polling
+  const { data: declarations, isLoading } = api.declaration.getAll.useQuery(undefined, {
+    refetchInterval: 5000, // Oppdater hvert 5. sekund
+    refetchOnWindowFocus: true, // Oppdater når vinduet får fokus
+  });
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session?.user?.role !== "ADMIN") {
+    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "INNSJEKK") {
       router.push("/");
     }
   }, [status, session, router]);
 
-  if (status === "loading") {
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
@@ -26,7 +33,7 @@ export default function CheckInPage() {
     );
   }
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "INNSJEKK")) {
     return null;
   }
 
@@ -40,7 +47,7 @@ export default function CheckInPage() {
             Oversikt over status på selvangivelser for inneværende sesong
           </p>
         </div>
-        <DeclarationCheck />
+        <DeclarationCheck declarations={declarations} />
       </main>
     </div>
   );

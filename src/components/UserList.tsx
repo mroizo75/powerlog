@@ -7,9 +7,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Role = "ADMIN" | "USER" | "TEKNISK" | "VEKTREG" | "INNSJEKK" | "POWERLOG";
+
+const roleDisplayNames: Record<Role, string> = {
+  ADMIN: "Administrator",
+  USER: "Bruker",
+  TEKNISK: "Teknisk",
+  VEKTREG: "Vektreg",
+  INNSJEKK: "Innsjekk",
+  POWERLOG: "Powerlog"
+};
 
 export function UserList() {
-  const [editingUser, setEditingUser] = useState<{ id: string; email: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: string; email: string; name: string; role: Role } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -52,6 +70,8 @@ export function UserList() {
     updateUser.mutate({
       id: editingUser.id,
       email: editingUser.email,
+      name: editingUser.name,
+      role: editingUser.role,
     });
   };
 
@@ -78,6 +98,16 @@ export function UserList() {
             {editingUser?.id === user.id ? (
               <form onSubmit={handleUpdate} className="flex items-center gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="name">Navn</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={editingUser.name}
+                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="email">E-post</Label>
                   <Input
                     id="email"
@@ -86,6 +116,25 @@ export function UserList() {
                     onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Rolle</Label>
+                  <Select 
+                    value={editingUser.role} 
+                    onValueChange={(value: Role) => setEditingUser({ ...editingUser, role: value })}
+                  >
+                    <SelectTrigger id="role" className="bg-white">
+                      <SelectValue placeholder="Velg rolle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USER">Bruker</SelectItem>
+                      <SelectItem value="ADMIN">Administrator</SelectItem>
+                      <SelectItem value="TEKNISK">Teknisk</SelectItem>
+                      <SelectItem value="VEKTREG">Vektreg</SelectItem>
+                      <SelectItem value="INNSJEKK">Innsjekk</SelectItem>
+                      <SelectItem value="POWERLOG">Powerlog</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button type="submit" disabled={updateUser.isPending}>
                   {updateUser.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -102,16 +151,22 @@ export function UserList() {
             ) : (
               <>
                 <div>
-                  <p className="font-medium">{user.email}</p>
+                  <p className="font-medium">{user.name || "Ingen navn"}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
                   <p className="text-sm text-gray-500">
-                    {user.role === "ADMIN" ? "Administrator" : "Bruker"}
+                    {roleDisplayNames[user.role as Role] || user.role}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setEditingUser({ id: user.id, email: user.email ?? "" })}
+                    onClick={() => setEditingUser({ 
+                      id: user.id, 
+                      email: user.email ?? "", 
+                      name: user.name ?? "",
+                      role: user.role as Role
+                    })}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>

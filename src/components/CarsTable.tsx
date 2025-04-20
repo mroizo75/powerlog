@@ -128,9 +128,9 @@ export default function CarsTable({ cars }: CarsTableProps) {
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                         {car.make} {car.model} ({car.year})
                         <br />
-                        <span className="text-xs text-gray-500">
+                        {/* <span className="text-xs text-gray-500">
                           {car.registration || "Ikke registrert"}
-                        </span>
+                        </span> */}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                         {lastDeclaration.declaredWeight || "-"}

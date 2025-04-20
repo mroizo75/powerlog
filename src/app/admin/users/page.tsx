@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function AdminUsersPage() {
   return (
+    <>
+    <AdminNav />
     <div className="flex flex-col items-center justify-center w-full">
-      <AdminNav />
+      
       <div className="container mx-auto p-4 space-y-8">
         <Card>
           <CardHeader>
@@ -26,5 +28,6 @@ export default function AdminUsersPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 } 

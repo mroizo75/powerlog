@@ -7,6 +7,7 @@ import { powerlogRouter } from "@/server/api/routers/powerlog";
 import { carRouter } from "@/server/api/routers/car";
 import { adminRouter } from "@/server/api/routers/admin";
 import { userRouter } from "./routers/user";
+import { boxlogRouter } from "./routers/boxlog";
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   car: carRouter,
   admin: adminRouter,
   user: userRouter,
+  boxlog: boxlogRouter,
 });
 
 // export type definition of API

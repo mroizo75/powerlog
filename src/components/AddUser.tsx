@@ -16,20 +16,27 @@ import {
 } from "@/components/ui/select";
 import AdminNav from "./AdminNav";
 
+type Role = "ADMIN" | "USER" | "TEKNISK" | "VEKTREG" | "INNSJEKK" | "POWERLOG";
+
 export function AddUser() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "USER">("USER");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<Role>("USER");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const utils = api.useUtils();
 
   const createUser = api.user.create.useMutation({
     onSuccess: () => {
       setSuccess("Bruker opprettet!");
       setEmail("");
       setPassword("");
+      setName("");
       setRole("USER");
       setError(null);
+      void utils.user.getAll.invalidate();
     },
     onError: (error) => {
       setError(error.message);
@@ -42,7 +49,7 @@ export function AddUser() {
     setError(null);
     setSuccess(null);
 
-    if (!email || !password) {
+    if (!email || !password || !name) {
       setError("Vennligst fyll ut alle felt");
       return;
     }
@@ -50,12 +57,24 @@ export function AddUser() {
     createUser.mutate({
       email,
       password,
+      name,
       role,
     });
   };
 
   return (
     <div className="container mx-auto p-4 space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Navn</Label>
+        <Input
+          id="name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Fornavn Etternavn"
+          required
+        />
+      </div>
       <div className="space-y-2">
         <Label htmlFor="email">E-post</Label>
         <Input
@@ -80,13 +99,17 @@ export function AddUser() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="role">Rolle</Label>
-        <Select value={role} onValueChange={(value: "ADMIN" | "USER") => setRole(value)}>
-          <SelectTrigger>
+        <Select value={role} onValueChange={(value: Role) => setRole(value)}>
+          <SelectTrigger className="bg-white w-full">
             <SelectValue placeholder="Velg rolle" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USER">Bruker</SelectItem>
-            <SelectItem value="ADMIN">Administrator</SelectItem>
+          <SelectContent className="bg-white z-[100]">
+            <SelectItem value="USER" className="cursor-pointer hover:bg-gray-100">Bruker</SelectItem>
+            <SelectItem value="ADMIN" className="cursor-pointer hover:bg-gray-100">Administrator</SelectItem>
+            <SelectItem value="TEKNISK" className="cursor-pointer hover:bg-gray-100">Teknisk</SelectItem>
+            <SelectItem value="VEKTREG" className="cursor-pointer hover:bg-gray-100">Vektreg</SelectItem>
+            <SelectItem value="INNSJEKK" className="cursor-pointer hover:bg-gray-100">Innsjekk</SelectItem>
+            <SelectItem value="POWERLOG" className="cursor-pointer hover:bg-gray-100">Powerlog</SelectItem>
           </SelectContent>
         </Select>
       </div>

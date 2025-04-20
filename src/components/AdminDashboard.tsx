@@ -118,9 +118,9 @@ export default function AdminDashboard() {
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                             {declaration.car.make} {declaration.car.model} ({declaration.car.year})
                             <br />
-                            <span className="text-xs text-gray-500">
+                            {/* <span className="text-xs text-gray-500">
                               {declaration.car.registration || "Ikke registrert"}
-                            </span>
+                            </span> */}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                             {declaration.declaredWeight || "-"}

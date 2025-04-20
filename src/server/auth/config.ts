@@ -63,7 +63,9 @@ export const authConfig = {
       },
     }),
   ],
-  secret: process.env.NEXT_AUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
+  basePath: "/api/auth",
   callbacks: {
     jwt: async ({ token, user }) => {
       console.log("JWT callback - Token før:", token);

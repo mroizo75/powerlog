@@ -24,12 +24,35 @@ interface WeightMeasurement {
   measuredWeight: number;
   nullPoint: number;
   heat: string | null;
+  metadata: string | null;
   measuredBy: {
     name: string | null;
   };
-  powerlog?: {
-    measuredPower: number | null;
+  declaration: {
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string | null;
+    carId: string;
+    startNumber: string;
+    declaredClass: DeclarationClass;
+    declaredWeight: number | null;
+    declaredPower: number | null;
+    isTurbo: boolean;
+    isActive: boolean;
   };
+  powerlog?: {
+    weight: number;
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    declarationId: string;
+    nullPoint: number;
+    heatNumber: string;
+    boxId: string;
+    measuredPower: number | null;
+  } | null;
+  powerlogId: string | null;
 }
 
 interface WeightPowerRatioHistory {
@@ -47,6 +70,9 @@ interface WeightPowerRatioHistory {
   declarationStartNumber: string;
   declarationClass: string;
   declarationDate: Date;
+  isTurbo: boolean;
+  totalAdditionalWeight: number;
+  isWithinLimit: boolean;
 }
 
 interface Declaration {
@@ -143,44 +169,33 @@ export default async function CarDetailsPage({
   // Legg til vektmålinger
   if (weightMeasurements) {
     weightMeasurements.forEach((measurement: WeightMeasurement) => {
-      // Finn den gjeldende selvangivelsen for denne målingen
-      const currentDeclaration = car.declarations
-        ?.filter(d => new Date(d.createdAt) <= new Date(measurement.createdAt) && d.isActive)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-
-      if (currentDeclaration) {
-        const totalAdditionalWeight = getTotalAdditionalWeight(currentDeclaration);
+      if (measurement.metadata) {
+        const metadata = JSON.parse(measurement.metadata);
         const ratio = calculateWeightPowerRatio(
-          measurement.measuredWeight, 
-          currentDeclaration.declaredPower,
-          currentDeclaration.declaredClass,
-          currentDeclaration.isTurbo,
-          totalAdditionalWeight
+          measurement.measuredWeight,
+          metadata.declaredPower,
+          metadata.declaredClass,
+          metadata.isTurbo,
+          metadata.totalAdditionalWeight
         );
 
-        // Beregn bilens egne vekt/effekt-forhold fra selvangivelsen
-        const declaredRatio = calculateWeightPowerRatio(
-          currentDeclaration.declaredWeight,
-          currentDeclaration.declaredPower,
-          currentDeclaration.declaredClass,
-          currentDeclaration.isTurbo,
-          totalAdditionalWeight
-        );
-
-        if (ratio && declaredRatio) {
+        if (ratio) {
           weightPowerHistory.push({
             id: measurement.id,
             createdAt: measurement.createdAt,
             measuredWeight: measurement.measuredWeight,
-            declaredPower: currentDeclaration.declaredPower || 0,
+            declaredPower: metadata.declaredPower,
             ratio,
-            requiredRatio: declaredRatio,
+            requiredRatio: metadata.requiredRatio,
             source: "weight",
             measuredBy: measurement.measuredBy,
-            declarationId: currentDeclaration.id,
-            declarationStartNumber: currentDeclaration.startNumber,
-            declarationClass: currentDeclaration.declaredClass,
-            declarationDate: currentDeclaration.createdAt
+            declarationId: metadata.declarationId,
+            declarationStartNumber: metadata.startNumber,
+            declarationClass: metadata.declaredClass,
+            declarationDate: new Date(metadata.declarationDate),
+            isTurbo: metadata.isTurbo,
+            totalAdditionalWeight: metadata.totalAdditionalWeight,
+            isWithinLimit: metadata.isWithinLimit
           });
         }
       }
@@ -398,16 +413,7 @@ export default async function CarDetailsPage({
                         {format(new Date(measurement.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">{measurement.measuredWeight} kg</td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        {(() => {
-                          const currentDeclaration = car.declarations
-                            ?.filter(d => new Date(d.createdAt) <= new Date(measurement.createdAt))
-                            .reduce((latest, current) => 
-                              new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
-                            );
-                          return currentDeclaration ? getTotalAdditionalWeight(currentDeclaration) : 0;
-                        })()} kg
-                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">{measurement.totalAdditionalWeight} kg</td>
                       <td className="whitespace-nowrap px-6 py-4">
                         {measurement.declaredPower} hk (Selvangivelse)
                       </td>
@@ -417,11 +423,11 @@ export default async function CarDetailsPage({
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          measurement.ratio >= measurement.requiredRatio
+                          measurement.isWithinLimit
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}>
-                          {measurement.ratio >= measurement.requiredRatio ? "OK" : "Feil"}
+                          {measurement.isWithinLimit ? "OK" : "Feil"}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
@@ -442,7 +448,7 @@ export default async function CarDetailsPage({
         )}
 
         {/* Powerlog målinger */}
-        {weightMeasurements && weightMeasurements.length > 0 && (
+        {weightMeasurements && weightMeasurements.length > 0 && weightMeasurements.some(m => m.powerlogId) && (
           <div className="rounded-lg bg-white p-6 shadow">
             <h2 className="mb-4 text-xl font-semibold text-gray-900">Powerlog målinger</h2>
             <div className="overflow-x-auto">
@@ -462,13 +468,10 @@ export default async function CarDetailsPage({
                       Vekt/Effekt-forhold
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Krav
+                      Selvangivelse
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Selvangivelse
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Målt av
@@ -476,67 +479,70 @@ export default async function CarDetailsPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {weightMeasurements.map((measurement: WeightMeasurement) => {
-                    // Finn den gjeldende selvangivelsen for denne målingen
-                    const currentDeclaration = car.declarations
-                      ?.filter(d => new Date(d.createdAt) <= new Date(measurement.createdAt))
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                  {weightMeasurements
+                    .filter(m => m.powerlogId)
+                    .map((measurement: WeightMeasurement) => {
+                      // Finn den gjeldende selvangivelsen for denne målingen
+                      const currentDeclaration = car.declarations
+                        ?.filter(d => new Date(d.createdAt) <= new Date(measurement.createdAt))
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
-                    if (!currentDeclaration) return null;
+                      if (!currentDeclaration) return null;
 
-                    const ratio = calculateWeightPowerRatio(
-                      measurement.measuredWeight,
-                      measurement.powerlog?.measuredPower || 0,
-                      currentDeclaration.declaredClass,
-                      currentDeclaration.isTurbo,
-                      getTotalAdditionalWeight(currentDeclaration)
-                    ) || 0;
+                      // Beregn vekt/effekt-forhold for målingen
+                      const ratio = calculateWeightPowerRatio(
+                        measurement.measuredWeight,
+                        measurement.powerlog?.measuredPower || 0,
+                        currentDeclaration.declaredClass,
+                        currentDeclaration.isTurbo,
+                        getTotalAdditionalWeight(currentDeclaration)
+                      ) || 0;
 
-                    // Beregn bilens egne vekt/effekt-forhold fra selvangivelsen
-                    const declaredRatio = calculateWeightPowerRatio(
-                      currentDeclaration.declaredWeight,
-                      currentDeclaration.declaredPower,
-                      currentDeclaration.declaredClass,
-                      currentDeclaration.isTurbo,
-                      getTotalAdditionalWeight(currentDeclaration)
-                    ) || 0;
+                      // Beregn vekt/effekt-forhold fra selvangivelsen
+                      const declaredRatio = calculateWeightPowerRatio(
+                        currentDeclaration.declaredWeight,
+                        currentDeclaration.declaredPower,
+                        currentDeclaration.declaredClass,
+                        currentDeclaration.isTurbo,
+                        getTotalAdditionalWeight(currentDeclaration)
+                      ) || 0;
 
-                    return (
-                      <tr key={measurement.id}>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {format(new Date(measurement.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">{measurement.measuredWeight} kg</td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {measurement.powerlog?.measuredPower || "-"} hk
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {ratio.toFixed(2)} kg/hk
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {declaredRatio.toFixed(2)} kg/hk
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            ratio >= declaredRatio
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}>
-                            {ratio >= declaredRatio ? "OK" : "Feil"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <div className="text-xs">
-                            <div>#{currentDeclaration.startNumber}</div>
-                            <div className="text-gray-500">
-                              {format(new Date(currentDeclaration.createdAt), "dd.MM.yyyy", { locale: nb })}
+                      return (
+                        <tr key={measurement.id}>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            {format(new Date(measurement.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">{measurement.measuredWeight} kg</td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            {measurement.powerlog?.measuredPower || "-"} hk
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            {ratio.toFixed(2)} kg/hk
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <div className="text-xs">
+                              <div>#{currentDeclaration.startNumber}</div>
+                              <div className="text-gray-500">
+                                {format(new Date(currentDeclaration.createdAt), "dd.MM.yyyy", { locale: nb })}
+                              </div>
+                              <div className="text-gray-500">
+                                {declaredRatio.toFixed(2)} kg/hk
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">{measurement.measuredBy.name || "-"}</td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              ratio >= declaredRatio
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}>
+                              {ratio >= declaredRatio ? "OK" : "Feil"}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">{measurement.measuredBy.name || "-"}</td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

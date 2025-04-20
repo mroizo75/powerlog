@@ -17,7 +17,6 @@ export default function WeightRegistration() {
   const [startNumber, setStartNumber] = useState("");
   const [weight, setWeight] = useState("");
   const [boxId, setBoxId] = useState("");
-  const [nullPoint, setNullPoint] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [declaration, setDeclaration] = useState<any>(null);
@@ -30,7 +29,6 @@ export default function WeightRegistration() {
   const [pendingWeightData, setPendingWeightData] = useState<{
     declarationId: string;
     measuredWeight: number;
-    nullPoint: number;
     heat?: HeatType;
     powerlogId?: string;
   } | null>(null);
@@ -48,7 +46,6 @@ export default function WeightRegistration() {
       setStartNumber("");
       setWeight("");
       setBoxId("");
-      setNullPoint("");
       setDeclaration(null);
       setShowWarning(false);
       setShowConfirmDialog(false);
@@ -70,6 +67,8 @@ export default function WeightRegistration() {
       setSuccess("");
     },
   });
+
+  const utils = api.useUtils();
 
   // Konverter klasse til API-format
   const convertClassToApiFormat = (classStr: string): "GT5" | "GT4" | "GT3" | "GT1" | "GT_PLUS" | "OTHER" => {
@@ -109,8 +108,17 @@ export default function WeightRegistration() {
       if (result.data) {
         setDeclaration(result.data);
         setMeasuredWeight(result.data.declaredWeight?.toString() || "0");
-        setNullPoint("0");
-        setHeat("");
+        
+        // Prøv å hente boxId fra boxlog
+        try {
+          const boxlogResult = await utils.boxlog.getByStartNumber.fetch(startNumber);
+          if (boxlogResult) {
+            setBoxId(boxlogResult.boxId);
+          }
+        } catch (error) {
+          // Hvis ingen boxlog finnes, fortsett uten å sette boxId
+          console.log("Ingen boxlog funnet for dette startnummeret");
+        }
       } else {
         setError("Ingen selvangivelse funnet for dette startnummeret og klassen");
       }
@@ -130,7 +138,6 @@ export default function WeightRegistration() {
     }
 
     const weight = parseFloat(measuredWeight);
-    const nullPointValue = nullPoint ? parseFloat(nullPoint) : 0;
 
     if (isNaN(weight)) {
       setError("Vennligst fyll ut vekt");
@@ -140,7 +147,6 @@ export default function WeightRegistration() {
     const weightData = {
       declarationId: declaration.id,
       measuredWeight: weight,
-      nullPoint: nullPointValue,
       heat: heat || undefined,
       powerlogId: boxId || undefined,
     };
@@ -191,6 +197,7 @@ export default function WeightRegistration() {
         type: "WEIGHT_POWER_RATIO",
         declarationId: pendingWeightData.declarationId,
         details: reportDetails,
+        source: "WEIGHT",
       });
     }
     
@@ -341,22 +348,6 @@ export default function WeightRegistration() {
               onChange={(e) => setMeasuredWeight(e.target.value)}
               className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base py-2.5 px-3 transition-colors duration-200"
               required
-              min="0"
-              step="0.1"
-              placeholder="0.0"
-            />
-          </div>
-
-          {/* Nullpunkt */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nullpunkt (valgfritt)
-            </label>
-            <input
-              type="number"
-              value={nullPoint}
-              onChange={(e) => setNullPoint(e.target.value)}
-              className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base py-2.5 px-3 transition-colors duration-200"
               min="0"
               step="0.1"
               placeholder="0.0"

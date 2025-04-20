@@ -6,7 +6,11 @@ import { format, isWithinInterval } from "date-fns";
 import { nb } from "date-fns/locale";
 import React from "react";
 
-export default function DeclarationCheck() {
+interface DeclarationCheckProps {
+  declarations?: any[]; // TODO: Definer riktig type for declarations
+}
+
+export default function DeclarationCheck({ declarations: propDeclarations }: DeclarationCheckProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const utils = api.useUtils();
@@ -22,12 +26,15 @@ export default function DeclarationCheck() {
     });
   };
 
-  const { data: declarations, isLoading } = api.declaration.getAll.useQuery(undefined, {
+  const { data: fetchedDeclarations, isLoading } = api.declaration.getAll.useQuery(undefined, {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
     staleTime: 0, // Alltid hent ferske data
   });
+
+  // Bruk propDeclarations hvis den er tilgjengelig, ellers bruk fetchedDeclarations
+  const declarations = propDeclarations ?? fetchedDeclarations;
 
   // Invalider spørringer når komponenten monteres
   React.useEffect(() => {

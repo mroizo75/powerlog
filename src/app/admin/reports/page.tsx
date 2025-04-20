@@ -1,17 +1,33 @@
+"use client";
+
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
 import ReportDashboard from "@/components/ReportDashboard";
 import AdminNav from "@/components/AdminNav";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 
-export default async function ReportsPage() {
-  const session = await auth();
+export default function ReportsPage() {
+  const { data: session, status } = useSession();
 
-  if (!session) {
-    redirect("/login");
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      redirect("/login");
+    } else if (session?.user?.role !== "ADMIN") {
+      redirect("/");
+    }
+  }, [status, session]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+      </div>
+    );
   }
 
-  if (session.user.role !== "ADMIN") {
-    redirect("/");
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return null;
   }
 
   return (

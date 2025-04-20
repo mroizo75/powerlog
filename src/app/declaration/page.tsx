@@ -30,6 +30,7 @@ export default function DeclarationPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formData, setFormData] = useState<any>(null);
   const [startNumber, setStartNumber] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
 
   // Hook for å hente eksisterende selvangivelse
   const { data: existingDeclaration } = api.declaration.getByStartNumberAndClass.useQuery(
@@ -75,7 +76,12 @@ export default function DeclarationPage() {
     onSuccess: () => {
       setIsSubmitting(false);
       setError(null);
-      router.push("/declaration/success");
+      // Videresend e-posten til suksess-siden
+      if (email) {
+        router.push(`/declaration/success?email=${encodeURIComponent(email)}`);
+      } else {
+        router.push("/declaration/success");
+      }
     },
     onError: (error) => {
       setIsSubmitting(false);
@@ -91,6 +97,7 @@ export default function DeclarationPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       startNumber: formData.get("startNumber") as string,
+      email: formData.get("email") as string,
       car: {
         make: formData.get("make") as string,
         model: formData.get("model") as string,
@@ -102,6 +109,8 @@ export default function DeclarationPage() {
       weightAdditions: selectedAdditions,
       isTurbo,
     };
+
+    console.log("Sending declaration data:", data);
 
     if (existingDeclaration) {
       setFormData(data);
@@ -190,6 +199,23 @@ export default function DeclarationPage() {
                 onChange={(e) => setStartNumber(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                E-post for kvittering
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Du vil motta en e-postkvittering med detaljer om din selvangivelse
+              </p>
             </div>
 
             <div>

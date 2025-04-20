@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="16" cy="16" r="15" fill="#2563eb" stroke="#1d4ed8" stroke-width="2"/>
+  <text dx="0" dy="0" font-family="Montserrat" font-size="24" font-weight="800" transform="translate(4 22)" fill="#fff" stroke-width="0">
+    <tspan y="0" font-weight="800" stroke-width="0">P</tspan>
+  </text>
+</svg> 

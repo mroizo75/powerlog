@@ -6,15 +6,21 @@ export async function middleware(request: NextRequest) {
   try {
     console.log("Middleware kjører for path:", request.nextUrl.pathname);
     
-    // Hvis det er en API-rute, la den gå videre
-    if (request.nextUrl.pathname.startsWith("/api")) {
-      console.log("API route detektert, lar passere");
+    // Hvis det er en API-rute eller statisk fil, la den gå videre
+    if (
+      request.nextUrl.pathname.startsWith("/api") ||
+      request.nextUrl.pathname.startsWith("/_next") ||
+      request.nextUrl.pathname.startsWith("/static") ||
+      request.nextUrl.pathname.includes(".")
+    ) {
+      console.log("API/statisk route detektert, lar passere");
       return NextResponse.next();
     }
 
     const token = await getToken({ 
       req: request, 
-      secret: process.env.NEXT_AUTH_SECRET 
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === "production"
     });
 
     console.log("Token status:", token ? "Eksisterer" : "Eksisterer ikke");
@@ -42,12 +48,33 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/login", request.url));
       }
 
-      if (token.role !== "ADMIN") {
-        console.log("Bruker har ikke ADMIN-rolle, redirecter til forsiden");
+      // Sjekk om bruker har admin-tilgang eller spesifikk tilgang for sin rolle
+      if (
+        token.role !== "ADMIN" && 
+        !(
+          (token.role === "INNSJEKK" && request.nextUrl.pathname.startsWith("/admin/check-in")) ||
+          (token.role === "VEKTREG" && request.nextUrl.pathname.startsWith("/admin/weight")) ||
+          (token.role === "POWERLOG" && request.nextUrl.pathname.startsWith("/admin/powerlog")) ||
+          (token.role === "TEKNISK" && request.nextUrl.pathname.startsWith("/admin/technical"))
+        )
+      ) {
+        console.log("Bruker har ikke tilgang til denne siden, redirecter til forsiden");
         return NextResponse.redirect(new URL("/", request.url));
       }
 
       console.log("Bruker har ADMIN-rolle, tillater tilgang");
+      return NextResponse.next();
+    }
+
+    // Hvis brukeren prøver å aksessere selvangivelse
+    if (request.nextUrl.pathname.startsWith("/selvangivelse")) {
+      console.log("Selvangivelse route detektert");
+      
+      if (!token) {
+        console.log("Ingen token funnet, redirecter til login");
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+
       return NextResponse.next();
     }
 

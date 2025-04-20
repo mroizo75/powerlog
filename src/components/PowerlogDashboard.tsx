@@ -179,6 +179,10 @@ export default function PowerlogDashboard() {
   const [selectedLog, setSelectedLog] = useState<PowerlogWithDeclaration | null>(null);
   const [measuredPower, setMeasuredPower] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [startNumber, setStartNumber] = useState("");
+  const [boxId, setBoxId] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<any>(null);
   const itemsPerPage = 10;
 
   const utils = api.useUtils();
@@ -198,9 +202,11 @@ export default function PowerlogDashboard() {
   const { mutate: createPowerlog } = api.powerlog.create.useMutation({
     onSuccess: () => {
       utils.powerlog.getAll.invalidate();
-      setIsPowerlogModalOpen(false);
-      setMeasuredPower("");
-      setSelectedLog(null);
+      setIsModalOpen(false);
+      setStartNumber("");
+      setBoxId("");
+      setError(null);
+      setSearchResult(null);
     },
     onError: (error: TRPCClientErrorLike<any>) => {
       setError(error.message);
@@ -211,13 +217,44 @@ export default function PowerlogDashboard() {
     onSuccess: () => {
       utils.powerlog.getAll.invalidate();
       setIsPowerlogModalOpen(false);
-      setMeasuredPower("");
       setSelectedLog(null);
+      setError(null);
     },
     onError: (error: TRPCClientErrorLike<any>) => {
       setError(error.message);
     },
   });
+
+  const handleSearchStartNumber = async () => {
+    if (!startNumber.trim()) {
+      setError("Vennligst fyll inn startnummer");
+      return;
+    }
+
+    setIsSearching(true);
+    setError(null);
+
+    try {
+      // Først sjekk om denne startnummeret finnes i boxlog
+      const boxlogResult = await utils.boxlog.getByStartNumber.fetch(startNumber);
+      
+      if (boxlogResult) {
+        // Hent deklarasjonen fra box-loggen
+        setSearchResult({
+          startNumber,
+          boxId: boxlogResult.boxId,
+          declaration: boxlogResult.declaration,
+        });
+        setBoxId(boxlogResult.boxId);
+      } else {
+        setError("Ingen box er knyttet til dette startnummeret. Vennligst registrer box i Box Log.");
+      }
+    } catch (error: any) {
+      setError(error.message || "Feil ved søk etter startnummer");
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   if (!session || session.user.role !== "ADMIN") {
     return null;
@@ -314,7 +351,7 @@ export default function PowerlogDashboard() {
         requiredRatio: isTurbo ? (limits[className]?.turbo ?? limits[className]?.normal ?? 0) : (limits[className]?.normal ?? 0),
         carInfo: carInfo,
         startNumber: log.declaration.startNumber,
-        source: "powerlog",
+        source: "POWERLOG",
         heatNumber: log.heatNumber,
         boxId: log.boxId,
         nullPoint: log.nullPoint,
@@ -324,6 +361,7 @@ export default function PowerlogDashboard() {
         type: "WEIGHT_POWER_RATIO" as const,
         declarationId: log.declaration.id,
         details: reportDetails,
+        source: "POWERLOG",
       });
     }
   };
@@ -339,7 +377,13 @@ export default function PowerlogDashboard() {
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Powerlog Oversikt</h2>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setStartNumber("");
+                  setBoxId("");
+                  setError(null);
+                  setSearchResult(null);
+                }}
                 className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
               >
                 Registrer Ny Powerlog
@@ -490,6 +534,157 @@ export default function PowerlogDashboard() {
           </div>
         </div>
       </main>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6">
+            <h3 className="mb-4 text-xl font-bold">Ny Powerlog</h3>
+            {error && (
+              <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            <div className="mb-4">
+              <div className="flex items-center space-x-4">
+                <input
+                  type="text"
+                  value={startNumber}
+                  onChange={(e) => setStartNumber(e.target.value)}
+                  placeholder="Startnummer"
+                  className="w-full rounded-md border border-gray-300 p-2"
+                />
+                <button
+                  onClick={handleSearchStartNumber}
+                  disabled={isSearching}
+                  className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {isSearching ? "Søker..." : "Søk"}
+                </button>
+              </div>
+            </div>
+
+            {searchResult && (
+              <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-700">
+                <p className="font-medium">Bil funnet:</p>
+                <p>
+                  {searchResult.declaration?.car?.make} {searchResult.declaration?.car?.model} (
+                  {searchResult.declaration?.car?.year})
+                </p>
+                <p className="mt-2 font-medium">Box ID:</p>
+                <p>{searchResult.boxId}</p>
+              </div>
+            )}
+
+            {searchResult && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+
+                  if (!searchResult) return;
+
+                  const formData = new FormData(e.currentTarget);
+                  const heatNumber = formData.get("heatNumber") as string;
+                  const weight = parseFloat(formData.get("weight") as string);
+                  const nullPoint = parseFloat(formData.get("nullPoint") as string);
+
+                  if (!heatNumber || isNaN(weight) || isNaN(nullPoint)) {
+                    setError("Vennligst fyll ut alle feltene");
+                    return;
+                  }
+
+                  createPowerlog({
+                    startNumber: searchResult.startNumber,
+                    heatNumber,
+                    weight,
+                    nullPoint,
+                    boxId: searchResult.boxId,
+                    measuredPower: 0, // Dette vil bli fylt ut senere
+                  });
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Heat
+                  </label>
+                  <select
+                    name="heatNumber"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  >
+                    <option value="">Velg heat</option>
+                    <option value="Trening">Trening</option>
+                    <option value="Kval">Kval</option>
+                    <option value="Finale 1">Finale 1</option>
+                    <option value="Finale 2">Finale 2</option>
+                    <option value="Finale 3">Finale 3</option>
+                    <option value="Finale 4">Finale 4</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Vekt (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="weight"
+                    step="0.01"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Nullpunkt
+                  </label>
+                  <input
+                    type="number"
+                    name="nullPoint"
+                    step="0.01"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setStartNumber("");
+                      setBoxId("");
+                      setError(null);
+                      setSearchResult(null);
+                    }}
+                    className="rounded-md bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                  >
+                    Registrer
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {!searchResult && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-md bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
+                >
+                  Lukk
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <PowerlogModal
         isOpen={isPowerlogModalOpen}

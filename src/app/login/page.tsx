@@ -37,6 +37,18 @@ export default function LoginPage() {
       if (session?.user?.role === "ADMIN") {
         router.push("/admin");
         router.refresh();
+      } else if (session?.user?.role === "INNSJEKK") {
+        router.push("/admin/check-in");
+        router.refresh();
+      } else if (session?.user?.role === "VEKTREG") {
+        router.push("/admin/weight");
+        router.refresh();
+      } else if (session?.user?.role === "POWERLOG") {
+        router.push("/admin/powerlog");
+        router.refresh();
+      } else if (session?.user?.role === "TEKNISK") {
+        router.push("/admin/technical");
+        router.refresh();
       } else {
         router.push("/");
       }
@@ -79,7 +91,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="relative block w-full rounded-t-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-t-md border-0 py-1.5 bg-white/10 text-white placeholder:text-white/50 ring-1 ring-inset ring-white/10 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 placeholder="E-postadresse"
               />
             </div>
@@ -93,7 +105,7 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-b-md border-0 py-1.5 bg-white/10 text-white placeholder:text-white/50 ring-1 ring-inset ring-white/10 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 placeholder="Passord"
               />
             </div>

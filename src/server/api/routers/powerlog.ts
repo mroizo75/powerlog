@@ -121,23 +121,38 @@ export const powerlogRouter = createTRPCRouter({
 
           // Sjekk om ratioen er utenfor grensen
           if (actualRatio < declaredRatio) {
-            // Generer rapport
-            await ctx.db.report.create({
-              data: {
-                type: "POWERLOG_WEIGHT_POWER_RATIO",
+            // Sjekk om det allerede finnes en rapport for denne bilen og målingen
+            const existingReport = await ctx.db.report.findFirst({
+              where: {
                 declarationId: powerlog.declaration.id,
+                type: "POWERLOG_WEIGHT_POWER_RATIO",
                 status: "PENDING",
-                createdById: ctx.session.user.id,
-                details: JSON.stringify({
-                  measuredWeight: powerlog.weightMeasurements[0].measuredWeight,
-                  measuredPower: input.measuredPower,
-                  ratio: actualRatio,
-                  requiredRatio: declaredRatio,
-                  carInfo: `${powerlog.declaration.car.make} ${powerlog.declaration.car.model} (${powerlog.declaration.car.year})`,
-                  startNumber: powerlog.declaration.startNumber,
-                }),
+                createdAt: {
+                  gte: new Date(Date.now() - 1000 * 60 * 5), // Sjekk rapporter fra de siste 5 minuttene
+                },
               },
             });
+
+            // Hvis det ikke finnes en eksisterende rapport, opprett en ny
+            if (!existingReport) {
+              await ctx.db.report.create({
+                data: {
+                  type: "POWERLOG_WEIGHT_POWER_RATIO",
+                  declarationId: powerlog.declaration.id,
+                  status: "PENDING",
+                  source: "POWERLOG",
+                  createdById: ctx.session.user.id,
+                  details: JSON.stringify({
+                    measuredWeight: powerlog.weightMeasurements[0].measuredWeight,
+                    measuredPower: input.measuredPower,
+                    ratio: actualRatio,
+                    requiredRatio: declaredRatio,
+                    carInfo: `${powerlog.declaration.car.make} ${powerlog.declaration.car.model} (${powerlog.declaration.car.year})`,
+                    startNumber: powerlog.declaration.startNumber,
+                  }),
+                },
+              });
+            }
           }
         }
       }

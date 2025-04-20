@@ -14,6 +14,7 @@ const reportDetailsSchema = z.object({
 const reportSchema = z.object({
   declarationId: z.string(),
   type: z.enum(["WEIGHT_POWER_RATIO"]),
+  source: z.enum(["WEIGHT", "POWERLOG"]),
   details: reportDetailsSchema,
 });
 
@@ -48,6 +49,7 @@ export const reportRouter = createTRPCRouter({
             declarationId: input.declarationId,
             createdById: ctx.session.user.id,
             status: "pending",
+            source: input.source,
           },
         });
 

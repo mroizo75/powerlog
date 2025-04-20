@@ -71,6 +71,7 @@ model User {
     weightMeasurements WeightMeasurement[]
     handledReports    Report[] @relation("ReportHandler")
     createdReports    Report[] @relation("ReportCreator")
+    boxLogs           BoxLog[]
 
     Declaration Declaration[]
 }
@@ -106,6 +107,7 @@ enum DeclarationClass {
 model Declaration {
     id              String            @id @default(cuid())
     startNumber     String
+    email           String?           // Legger til e-postfelt for kvitteringer
     declaredClass   DeclarationClass
     declaredWeight  Float?
     declaredPower   Float?
@@ -119,11 +121,13 @@ model Declaration {
     weightAdditions WeightAddition[]
     powerlogs       Powerlog[]
     reports         Report[]
+    boxLogs         BoxLog[]
     userId          String?
     user            User?            @relation(fields: [userId], references: [id])
 
     @@index([carId])
     @@index([userId])
+    @@index([email])
 }
 
 model WeightAddition {
@@ -202,6 +206,7 @@ model Report {
     id            String   @id @default(cuid())
     type          String   // "weight", "power", "technical"
     status        String   // "pending", "resolved", "rejected"
+    source        String   // "WEIGHT", "POWERLOG"
     details       String   @db.Text  // Lagret som tekst, konverteres til JSON i applikasjonskoden
     
     // Relasjoner
@@ -221,5 +226,26 @@ model Report {
 
     @@index([declarationId])
     @@index([handledById])
+    @@index([createdById])
+}
+
+model BoxLog {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    
+    startNumber   String
+    boxId         String
+    isActive      Boolean  @default(true)
+    
+    declarationId String?
+    declaration   Declaration? @relation(fields: [declarationId], references: [id])
+    
+    createdBy     User?    @relation(fields: [createdById], references: [id])
+    createdById   String?
+    
+    @@index([startNumber])
+    @@index([boxId])
+    @@index([declarationId])
     @@index([createdById])
 }
