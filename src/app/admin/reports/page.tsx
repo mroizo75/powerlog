@@ -13,7 +13,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (status === "unauthenticated") {
       redirect("/login");
-    } else if (session?.user?.role !== "ADMIN") {
+    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "TEKNISK") {
       redirect("/");
     }
   }, [status, session]);
@@ -26,7 +26,7 @@ export default function ReportsPage() {
     );
   }
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "TEKNISK")) {
     return null;
   }
 

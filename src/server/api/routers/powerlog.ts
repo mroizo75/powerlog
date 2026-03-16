@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
+// Definer grenser for hver klasse
+const limits: Record<string, { normal: number; turbo?: number }> = {
+  "GT5": { normal: 7.3 },
+  "GT4": { normal: 4.9, turbo: 5.5 },
+  "GT3": { normal: 3.7, turbo: 4.0 },
+  "GT1": { normal: 2.5 },
+  "GT_PLUS": { normal: 1.0 },
+  "OTHER": { normal: 0.0 },
+};
+
 const powerlogSchema = z.object({
   startNumber: z.string(),
   heatNumber: z.string(),
@@ -103,59 +113,10 @@ export const powerlogRouter = createTRPCRouter({
           declaration: {
             include: {
               car: true,
-              weightAdditions: true,
             },
           },
-          weightMeasurements: true,
         },
       });
-
-      // Beregn vekt/effekt-ratio
-      if (powerlog.weightMeasurements?.[0] && powerlog.declaration) {
-        const declaredWeight = powerlog.declaration.declaredWeight;
-        const declaredPower = powerlog.declaration.declaredPower;
-
-        if (declaredWeight && declaredPower) {
-          const actualRatio = powerlog.weightMeasurements[0].measuredWeight / input.measuredPower;
-          const declaredRatio = declaredWeight / declaredPower;
-
-          // Sjekk om ratioen er utenfor grensen
-          if (actualRatio < declaredRatio) {
-            // Sjekk om det allerede finnes en rapport for denne bilen og målingen
-            const existingReport = await ctx.db.report.findFirst({
-              where: {
-                declarationId: powerlog.declaration.id,
-                type: "POWERLOG_WEIGHT_POWER_RATIO",
-                status: "PENDING",
-                createdAt: {
-                  gte: new Date(Date.now() - 1000 * 60 * 5), // Sjekk rapporter fra de siste 5 minuttene
-                },
-              },
-            });
-
-            // Hvis det ikke finnes en eksisterende rapport, opprett en ny
-            if (!existingReport) {
-              await ctx.db.report.create({
-                data: {
-                  type: "POWERLOG_WEIGHT_POWER_RATIO",
-                  declarationId: powerlog.declaration.id,
-                  status: "PENDING",
-                  source: "POWERLOG",
-                  createdById: ctx.session.user.id,
-                  details: JSON.stringify({
-                    measuredWeight: powerlog.weightMeasurements[0].measuredWeight,
-                    measuredPower: input.measuredPower,
-                    ratio: actualRatio,
-                    requiredRatio: declaredRatio,
-                    carInfo: `${powerlog.declaration.car.make} ${powerlog.declaration.car.model} (${powerlog.declaration.car.year})`,
-                    startNumber: powerlog.declaration.startNumber,
-                  }),
-                },
-              });
-            }
-          }
-        }
-      }
 
       return powerlog;
     }),

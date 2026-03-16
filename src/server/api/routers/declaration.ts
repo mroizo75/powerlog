@@ -4,18 +4,6 @@ import { DeclarationClass as PrismaDeclarationClass } from "@prisma/client";
 import { WEIGHT_ADDITIONS } from "@/config/weightAdditions";
 import { TRPCError } from "@trpc/server";
 
-// Definer klasser lokalt
-const DeclarationClass = {
-  GT5: "GT5",
-  GT4: "GT4",
-  GT3: "GT3",
-  GT1: "GT1",
-  GT_PLUS: "GT_PLUS",
-  OTHER: "OTHER",
-} as const;
-
-type DeclarationClass = typeof DeclarationClass[keyof typeof DeclarationClass];
-
 // Valideringsskjema for bil
 const carSchema = z.object({
   make: z.string(),
@@ -47,6 +35,7 @@ export const declarationRouter = createTRPCRouter({
           make: z.string().min(1, { message: "Bilmerke er påkrevd" }),
           model: z.string().min(1, { message: "Bilmodell er påkrevd" }),
           year: z.number().min(1900).max(new Date().getFullYear()),
+          registration: z.string().optional(),
         }),
         declaredWeight: z.number().min(0),
         declaredPower: z.number().min(0),
@@ -231,12 +220,6 @@ export const declarationRouter = createTRPCRouter({
           // Fortsett selv om e-post-sending feiler
         }
       }
-
-      // Invalider spørringer
-      await ctx.db.$transaction(async (tx) => {
-        await tx.declaration.findMany();
-        await tx.car.findMany();
-      });
 
       return declaration;
     }),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -26,12 +26,8 @@ export default function LoginPage() {
       setError("Feil e-post eller passord");
       setIsLoading(false);
     } else {
-      // Vent litt for å la session oppdateres
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
       // Hent brukerens rolle fra session
-      const response = await fetch("/api/auth/session");
-      const session = await response.json();
+      const session = await getSession();
       
       // Omdiriger basert på rolle
       if (session?.user?.role === "ADMIN") {
@@ -41,17 +37,19 @@ export default function LoginPage() {
         router.push("/admin/check-in");
         router.refresh();
       } else if (session?.user?.role === "VEKTREG") {
-        router.push("/admin/weight");
+        router.push("/admin/weightreg");
         router.refresh();
       } else if (session?.user?.role === "POWERLOG") {
         router.push("/admin/powerlog");
         router.refresh();
       } else if (session?.user?.role === "TEKNISK") {
-        router.push("/admin/technical");
+        router.push("/admin/cars");
         router.refresh();
       } else {
         router.push("/");
       }
+
+      setIsLoading(false);
     }
   };
 
@@ -65,7 +63,7 @@ export default function LoginPage() {
       >
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-            Logg inn på Powerlogg
+            Logg inn på Powerlog
           </h2>
         </div>
 

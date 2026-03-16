@@ -31,6 +31,7 @@ export default function WeightRegistration() {
     measuredWeight: number;
     heat?: HeatType;
     powerlogId?: string;
+    measuredById: string;
   } | null>(null);
   const [declaredClass, setDeclaredClass] = useState<DeclarationClassType>(DeclarationClass.GT3);
   const [declaredWeight, setDeclaredWeight] = useState<number | null>(null);
@@ -50,6 +51,8 @@ export default function WeightRegistration() {
       setShowWarning(false);
       setShowConfirmDialog(false);
       setPendingWeightData(null);
+      setMeasuredWeight("");
+      setHeat("");
     },
     onError: (error) => {
       setError(error.message);
@@ -132,7 +135,7 @@ export default function WeightRegistration() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!declaration || !measuredWeight) {
+    if (!declaration || !measuredWeight || !session?.user?.id) {
       setError("Vennligst fyll ut alle påkrevde felt");
       return;
     }
@@ -149,6 +152,7 @@ export default function WeightRegistration() {
       measuredWeight: weight,
       heat: heat || undefined,
       powerlogId: boxId || undefined,
+      measuredById: session.user.id,
     };
 
     // Beregn vekt/effekt-ratio

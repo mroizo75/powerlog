@@ -10,7 +10,7 @@ export default async function WeightListPage() {
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== "ADMIN" && session.user.role !== "VEKTREG" && session.user.role !== "TEKNISK") {
     redirect("/");
   }
 

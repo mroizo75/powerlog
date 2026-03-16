@@ -4,8 +4,6 @@ import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   try {
-    console.log("Middleware kjører for path:", request.nextUrl.pathname);
-    
     // Hvis det er en API-rute eller statisk fil, la den gå videre
     if (
       request.nextUrl.pathname.startsWith("/api") ||
@@ -13,7 +11,6 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith("/static") ||
       request.nextUrl.pathname.includes(".")
     ) {
-      console.log("API/statisk route detektert, lar passere");
       return NextResponse.next();
     }
 
@@ -23,64 +20,58 @@ export async function middleware(request: NextRequest) {
       secureCookie: process.env.NODE_ENV === "production"
     });
 
-    console.log("Token status:", token ? "Eksisterer" : "Eksisterer ikke");
-    if (token) {
-      console.log("Token data:", {
-        id: token.id,
-        role: token.role,
-        email: token.email
-      });
-    }
-
     // Hvis brukeren er admin og prøver å gå til forsiden
     if (token?.role === "ADMIN" && request.nextUrl.pathname === "/") {
-      console.log("Admin bruker prøver å gå til forsiden, redirecter til admin dashboard");
       return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    // Hvis brukeren med POWERLOG-rolle prøver å gå til forsiden
+    if (token?.role === "POWERLOG" && request.nextUrl.pathname === "/") {
+      return NextResponse.redirect(new URL("/admin/powerlog", request.url));
     }
 
     // Hvis brukeren prøver å aksessere admin-ruter
     if (request.nextUrl.pathname.startsWith("/admin")) {
-      console.log("Admin route detektert");
-      
-      // Hvis brukeren ikke er logget inn eller ikke har ADMIN-rolle
+      // Hvis brukeren ikke er logget inn
       if (!token) {
-        console.log("Ingen token funnet, redirecter til login");
         return NextResponse.redirect(new URL("/login", request.url));
       }
 
-      // Sjekk om bruker har admin-tilgang eller spesifikk tilgang for sin rolle
-      if (
-        token.role !== "ADMIN" && 
-        !(
-          (token.role === "INNSJEKK" && request.nextUrl.pathname.startsWith("/admin/check-in")) ||
-          (token.role === "VEKTREG" && request.nextUrl.pathname.startsWith("/admin/weight")) ||
-          (token.role === "POWERLOG" && request.nextUrl.pathname.startsWith("/admin/powerlog")) ||
-          (token.role === "TEKNISK" && request.nextUrl.pathname.startsWith("/admin/technical"))
-        )
-      ) {
-        console.log("Bruker har ikke tilgang til denne siden, redirecter til forsiden");
-        return NextResponse.redirect(new URL("/", request.url));
+      // Sjekk tilgang basert på rolle
+      if (token.role === "ADMIN") {
+        // Admin har tilgang til alt
+        return NextResponse.next();
+      } else if (token.role === "VEKTREG") {
+        // VEKTREG kan se weightreg-seksjonen, vektliste og boxlog
+        if (request.nextUrl.pathname.startsWith("/admin/weightreg") || 
+            request.nextUrl.pathname.startsWith("/admin/weight-list") ||
+            request.nextUrl.pathname.startsWith("/admin/boxlog")) {
+          return NextResponse.next();
+        }
+      } else if (token.role === "TEKNISK") {
+        // TEKNISK kan se alt unntatt powerlog, boxlog og users
+        if (!request.nextUrl.pathname.startsWith("/admin/powerlog") && 
+            !request.nextUrl.pathname.startsWith("/admin/boxlog") &&
+            !request.nextUrl.pathname.startsWith("/admin/users")) {
+          return NextResponse.next();
+        }
+      } else if (token.role === "INNSJEKK" && request.nextUrl.pathname.startsWith("/admin/check-in")) {
+        // INNSJEKK kan kun se check-in
+        return NextResponse.next();
+      } else if (token.role === "POWERLOG") {
+        // POWERLOG kan kun se powerlog
+        if (request.nextUrl.pathname.startsWith("/admin/powerlog")) {
+          return NextResponse.next();
+        }
+        // Hvis POWERLOG-bruker prøver å aksessere andre admin-sider, redirect til powerlog
+        return NextResponse.redirect(new URL("/admin/powerlog", request.url));
       }
 
-      console.log("Bruker har ADMIN-rolle, tillater tilgang");
-      return NextResponse.next();
-    }
-
-    // Hvis brukeren prøver å aksessere selvangivelse
-    if (request.nextUrl.pathname.startsWith("/selvangivelse")) {
-      console.log("Selvangivelse route detektert");
-      
-      if (!token) {
-        console.log("Ingen token funnet, redirecter til login");
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-
-      return NextResponse.next();
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     return NextResponse.next();
-  } catch (error) {
-    console.error("Middleware feil:", error);
+  } catch {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 }

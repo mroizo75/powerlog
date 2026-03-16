@@ -1,18 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-
-// Definer klasser lokalt
-const DeclarationClass = {
-  GT5: "GT5",
-  GT4: "GT4",
-  GT3: "GT3",
-  GT1: "GT1",
-  GT_PLUS: "GT_PLUS",
-  OTHER: "OTHER",
-} as const;
-
-type DeclarationClass = typeof DeclarationClass[keyof typeof DeclarationClass];
+import { CLASS_LIMITS, getRequiredRatio } from "@/config/classLimits";
 
 // Valideringsskjema for vektmåling
 const weightMeasurementSchema = z.object({
@@ -21,17 +10,8 @@ const weightMeasurementSchema = z.object({
   nullPoint: z.number().optional(),
   powerlogId: z.string().optional(),
   heat: z.enum(["Trening", "Kval", "Finale 1", "Finale 2", "Finale 3", "Finale 4"]).optional(),
+  measuredById: z.string(),
 });
-
-// Klassespesifikke grenser
-const CLASS_LIMITS: Record<DeclarationClass, { normal: number; turbo: number }> = {
-  GT5: { normal: 7.3, turbo: 7.3 },
-  GT4: { normal: 4.9, turbo: 5.5 },
-  GT3: { normal: 3.7, turbo: 4.0 },
-  GT1: { normal: 2.5, turbo: 2.5 },
-  GT_PLUS: { normal: 1.0, turbo: 1.0 },
-  OTHER: { normal: 0, turbo: 0 }, // Dette brukes ikke, men er nødvendig for type-sikkerhet
-};
 
 export const weightRouter = createTRPCRouter({
   // Registrer ny vektmåling
@@ -78,8 +58,7 @@ export const weightRouter = createTRPCRouter({
 
       // Beregn vekt/effekt-ratio
       const weightPowerRatio = (input.measuredWeight + totalAdditionalWeight) / (declaration.declaredPower || 1);
-      const classLimit = CLASS_LIMITS[declaration.declaredClass];
-      const requiredRatio = declaration.isTurbo ? classLimit.turbo : classLimit.normal;
+      const requiredRatio = getRequiredRatio(declaration.declaredClass, declaration.isTurbo);
       const isWithinLimit = weightPowerRatio >= requiredRatio;
 
       // Opprett vektmålingen med all nødvendig informasjon
@@ -90,7 +69,7 @@ export const weightRouter = createTRPCRouter({
           measuredWeight: input.measuredWeight,
           nullPoint: input.nullPoint ?? 0,
           powerlogId: powerlogId,
-          measuredById: ctx.session.user.id,
+          measuredById: input.measuredById,
           heat: input.heat,
           // Lagre beregnede verdier for historikk
           metadata: JSON.stringify({
@@ -202,7 +181,7 @@ export const weightRouter = createTRPCRouter({
         throw new Error("Selvangivelse ikke funnet");
       }
 
-      if (declaration.declaredClass === DeclarationClass.OTHER || !declaration.declaredPower) {
+      if (declaration.declaredClass === "OTHER" || !declaration.declaredPower) {
         return {
           weightPowerRatio: null,
           classLimit: null,
@@ -213,8 +192,7 @@ export const weightRouter = createTRPCRouter({
       }
 
       const weightPowerRatio = input.measuredWeight / declaration.declaredPower;
-      const classLimit = CLASS_LIMITS[declaration.declaredClass as DeclarationClass];
-      const limit = declaration.isTurbo ? classLimit.turbo : classLimit.normal;
+      const limit = getRequiredRatio(declaration.declaredClass, declaration.isTurbo);
       const isWithinLimit = weightPowerRatio <= limit;
 
       return {
@@ -224,5 +202,99 @@ export const weightRouter = createTRPCRouter({
         declaredPower: declaration.declaredPower,
         declaredClass: declaration.declaredClass,
       };
+    }),
+
+  getArchived: protectedProcedure
+    .query(async ({ ctx }) => {
+      return ctx.db.archivedWeightMeasurement.findMany({
+        include: {
+          declaration: {
+            include: {
+              car: true,
+            },
+          },
+          measuredBy: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }),
+
+  archive: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const measurement = await ctx.db.weightMeasurement.findUnique({
+        where: { id: input.id },
+        include: {
+          declaration: {
+            include: {
+              car: true,
+            },
+          },
+          measuredBy: true,
+        },
+      });
+
+      if (!measurement) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Vektmåling ikke funnet",
+        });
+      }
+
+      await ctx.db.archivedWeightMeasurement.create({
+        data: {
+          declarationId: measurement.declarationId,
+          carId: measurement.carId,
+          measuredWeight: measurement.measuredWeight,
+          nullPoint: measurement.nullPoint,
+          heat: measurement.heat,
+          measuredById: measurement.measuredById,
+          powerlogId: measurement.powerlogId,
+          metadata: measurement.metadata,
+        },
+      });
+
+      await ctx.db.weightMeasurement.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true };
+    }),
+
+  archiveAll: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const measurements = await ctx.db.weightMeasurement.findMany({
+        include: {
+          declaration: {
+            include: {
+              car: true,
+            },
+          },
+          measuredBy: true,
+        },
+      });
+
+      for (const measurement of measurements) {
+        await ctx.db.archivedWeightMeasurement.create({
+          data: {
+            declarationId: measurement.declarationId,
+            carId: measurement.carId,
+            measuredWeight: measurement.measuredWeight,
+            nullPoint: measurement.nullPoint,
+            heat: measurement.heat,
+            measuredById: measurement.measuredById,
+            powerlogId: measurement.powerlogId,
+            metadata: measurement.metadata,
+          },
+        });
+
+        await ctx.db.weightMeasurement.delete({
+          where: { id: measurement.id },
+        });
+      }
+
+      return { archivedCount: measurements.length };
     }),
 }); 

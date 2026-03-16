@@ -4,7 +4,6 @@ import { useState } from "react";
 import { api } from "@/trpc/react";
 import { format, isWithinInterval } from "date-fns";
 import { nb } from "date-fns/locale";
-import React from "react";
 
 interface DeclarationCheckProps {
   declarations?: any[]; // TODO: Definer riktig type for declarations
@@ -13,7 +12,6 @@ interface DeclarationCheckProps {
 export default function DeclarationCheck({ declarations: propDeclarations }: DeclarationCheckProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState<string>("");
-  const utils = api.useUtils();
 
   // Hent nåværende år
   const currentYear = new Date().getFullYear();
@@ -31,16 +29,11 @@ export default function DeclarationCheck({ declarations: propDeclarations }: Dec
     refetchOnMount: true,
     refetchOnReconnect: true,
     staleTime: 0, // Alltid hent ferske data
+    enabled: !propDeclarations,
   });
 
   // Bruk propDeclarations hvis den er tilgjengelig, ellers bruk fetchedDeclarations
   const declarations = propDeclarations ?? fetchedDeclarations;
-
-  // Invalider spørringer når komponenten monteres
-  React.useEffect(() => {
-    utils.declaration.getAll.invalidate();
-    utils.car.getAll.invalidate();
-  }, [utils]);
 
   const filteredDeclarations = declarations?.filter((declaration) => {
     const matchesSearch = declaration.startNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

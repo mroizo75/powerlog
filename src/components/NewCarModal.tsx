@@ -17,6 +17,8 @@ interface FormData {
   declaredWeight: number;
   declaredPower: number;
   isTurbo: boolean;
+  email: string;
+  weightAdditions: string[];
 }
 
 export default function NewCarModal({ isOpen, onClose }: NewCarModalProps) {
@@ -30,6 +32,8 @@ export default function NewCarModal({ isOpen, onClose }: NewCarModalProps) {
     declaredWeight: 0,
     declaredPower: 0,
     isTurbo: false,
+    email: "",
+    weightAdditions: [],
   });
 
   const submitDeclaration = api.declaration.submit.useMutation({
@@ -45,6 +49,8 @@ export default function NewCarModal({ isOpen, onClose }: NewCarModalProps) {
         declaredWeight: 0,
         declaredPower: 0,
         isTurbo: false,
+        email: "",
+        weightAdditions: [],
       });
     },
   });
@@ -58,6 +64,8 @@ export default function NewCarModal({ isOpen, onClose }: NewCarModalProps) {
         declaredWeight: formData.declaredWeight,
         declaredPower: formData.declaredPower,
         isTurbo: formData.isTurbo,
+        email: formData.email,
+        weightAdditions: formData.weightAdditions,
         car: {
           make: formData.make,
           model: formData.model,
@@ -137,6 +145,16 @@ export default function NewCarModal({ isOpen, onClose }: NewCarModalProps) {
                 required
                 value={formData.startNumber}
                 onChange={(e) => setFormData({ ...formData, startNumber: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">E-post</label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
               />
             </div>

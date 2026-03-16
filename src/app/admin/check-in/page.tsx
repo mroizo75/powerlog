@@ -13,14 +13,14 @@ export default function CheckInPage() {
 
   // Hent deklarasjoner med polling
   const { data: declarations, isLoading } = api.declaration.getAll.useQuery(undefined, {
-    refetchInterval: 5000, // Oppdater hvert 5. sekund
+    refetchInterval: 10000, // Oppdater hvert 10. sekund
     refetchOnWindowFocus: true, // Oppdater når vinduet får fokus
   });
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "INNSJEKK") {
+    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "INNSJEKK" && session?.user?.role !== "TEKNISK") {
       router.push("/");
     }
   }, [status, session, router]);
@@ -33,7 +33,7 @@ export default function CheckInPage() {
     );
   }
 
-  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "INNSJEKK")) {
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "INNSJEKK" && session.user.role !== "TEKNISK")) {
     return null;
   }
 

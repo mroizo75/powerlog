@@ -9,8 +9,8 @@ import { TRPCReactProvider } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Powerlogg",
-  description: "Powerlogg",
+  title: "Powerlog",
+  description: "Powerlog",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

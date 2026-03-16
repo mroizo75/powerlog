@@ -72,6 +72,9 @@ model User {
     handledReports    Report[] @relation("ReportHandler")
     createdReports    Report[] @relation("ReportCreator")
     boxLogs           BoxLog[]
+    handledArchivedReports    ArchivedReport[] @relation("ArchivedReportHandler")
+    createdArchivedReports    ArchivedReport[] @relation("ArchivedReportCreator")
+    archivedWeightMeasurements ArchivedWeightMeasurement[]
 
     Declaration Declaration[]
 }
@@ -124,6 +127,8 @@ model Declaration {
     boxLogs         BoxLog[]
     userId          String?
     user            User?            @relation(fields: [userId], references: [id])
+    archivedReports ArchivedReport[]
+    archivedWeightMeasurements ArchivedWeightMeasurement[]
 
     @@index([carId])
     @@index([userId])
@@ -154,6 +159,7 @@ model Car {
     // Relasjoner
     declarations  Declaration[]
     weightMeasurements WeightMeasurement[]
+    archivedWeightMeasurements ArchivedWeightMeasurement[]
     
     @@index([registration])
 }
@@ -174,6 +180,7 @@ model Powerlog {
     weightMeasurements WeightMeasurement[]
     declaration   Declaration @relation(fields: [declarationId], references: [id])
     declarationId String
+    archivedWeightMeasurements ArchivedWeightMeasurement[]
     
     @@index([declarationId])
     @@index([boxId])
@@ -208,6 +215,9 @@ model Report {
     status        String   // "pending", "resolved", "rejected"
     source        String   // "WEIGHT", "POWERLOG"
     details       String   @db.Text  // Lagret som tekst, konverteres til JSON i applikasjonskoden
+    resolution    String?  @db.Text  // Løsningskommentar
+    sentToJury    Boolean  @default(false)  // Om rapporten er sendt til jury
+    juryComment   String?  @db.Text  // Kommentar for juryen
     
     // Relasjoner
     declaration   Declaration @relation(fields: [declarationId], references: [id])
@@ -248,4 +258,60 @@ model BoxLog {
     @@index([boxId])
     @@index([declarationId])
     @@index([createdById])
+}
+
+model ArchivedReport {
+    id            String   @id @default(cuid())
+    type          String   // "weight", "power", "technical"
+    status        String   // "resolved", "rejected"
+    source        String   // "WEIGHT", "POWERLOG"
+    details       String   @db.Text
+    resolution    String?  @db.Text
+    sentToJury    Boolean  @default(false)
+    juryComment   String?  @db.Text
+    
+    // Relasjoner
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+    declarationId String
+    
+    // Hvem som håndterte rapporten
+    handledBy     User?     @relation("ArchivedReportHandler", fields: [handledById], references: [id])
+    handledById   String?
+    
+    // Hvem som opprettet rapporten
+    createdBy     User     @relation("ArchivedReportCreator", fields: [createdById], references: [id])
+    createdById   String
+
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    archivedAt    DateTime @default(now())
+
+    @@index([declarationId])
+    @@index([handledById])
+    @@index([createdById])
+}
+
+model ArchivedWeightMeasurement {
+    id            String   @id @default(cuid())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    archivedAt    DateTime @default(now())
+    declarationId String
+    carId         String
+    measuredWeight Float
+    nullPoint     Float    @default(0)
+    powerlogId    String?
+    measuredById  String
+    heat          String?
+    metadata      String?  @db.Text
+    
+    declaration   Declaration @relation(fields: [declarationId], references: [id])
+    car           Car      @relation(fields: [carId], references: [id])
+    measuredBy    User     @relation(fields: [measuredById], references: [id])
+    powerlog      Powerlog? @relation(fields: [powerlogId], references: [id])
+
+    @@index([declarationId])
+    @@index([carId])
+    @@index([measuredById])
+    @@index([powerlogId])
 }

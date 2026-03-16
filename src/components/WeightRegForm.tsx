@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { api } from "@/trpc/react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 export default function WeightRegForm() {
   const [startNumber, setStartNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   // Hent selvangivelse basert på startnummer
   const { data: declaration, refetch: refetchDeclaration } = api.declaration.getByStartNumber.useQuery(
@@ -58,6 +60,7 @@ export default function WeightRegForm() {
       measuredWeight: Number(formData.get("measuredWeight")),
       nullPoint: Number(formData.get("nullPoint")),
       powerlogId: formData.get("powerlogId") as string,
+      measuredById: session?.user?.id ?? "",
     };
 
     submitMeasurement.mutate(data);

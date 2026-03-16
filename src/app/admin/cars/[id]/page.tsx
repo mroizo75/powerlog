@@ -1,22 +1,13 @@
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
 import { api } from "@/trpc/server";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { nb } from "date-fns/locale";
 import AdminNav from "@/components/AdminNav";
 import { DeclarationClass } from "@prisma/client";
+import { getRequiredRatio } from "@/config/classLimits";
 import { revalidatePath } from "next/cache";
 import DeleteDeclarationButton from "@/components/DeleteDeclarationButton";
-
-// Definer grenser for hver klasse
-const CLASS_LIMITS: Record<string, { normal: number; turbo?: number }> = {
-  "GT5": { normal: 7.3 },
-  "GT4": { normal: 4.9, turbo: 5.5 },
-  "GT3": { normal: 3.7, turbo: 4.0 },
-  "GT1": { normal: 2.5 },
-  "GT_PLUS": { normal: 1.0 },
-  "OTHER": { normal: 0.0 },
-};
 
 interface WeightMeasurement {
   id: string;
@@ -75,6 +66,11 @@ interface WeightPowerRatioHistory {
   isWithinLimit: boolean;
 }
 
+const parseValidDate = (value: unknown, fallback: Date) => {
+  const parsed = new Date(value as string | number | Date);
+  return isValid(parsed) ? parsed : fallback;
+};
+
 interface Declaration {
   id: string;
   createdAt: Date;
@@ -123,7 +119,7 @@ export default async function CarDetailsPage({
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== "ADMIN" && session.user.role !== "TEKNISK") {
     redirect("/");
   }
 
@@ -158,9 +154,11 @@ export default async function CarDetailsPage({
   // Sjekk om vekt/effekt-forholdet er innenfor grensen
   const isWithinLimit = (ratio: number | null, className: string, isTurbo: boolean) => {
     if (!ratio) return false;
-    const limit = CLASS_LIMITS[className];
-    if (!limit) return false;
-    return ratio >= (isTurbo ? limit.turbo || limit.normal : limit.normal);
+    const requiredRatio = getRequiredRatio(
+      className as "GT5" | "GT4" | "GT3" | "GT1" | "GT_PLUS" | "OTHER",
+      isTurbo,
+    );
+    return ratio >= requiredRatio;
   };
 
   // Kombiner vektmålinger og rapporter til en historikk
@@ -170,12 +168,33 @@ export default async function CarDetailsPage({
   if (weightMeasurements) {
     weightMeasurements.forEach((measurement: WeightMeasurement) => {
       if (measurement.metadata) {
-        const metadata = JSON.parse(measurement.metadata);
+        let metadata: {
+          declaredPower?: number;
+          declaredClass?: string;
+          isTurbo?: boolean;
+          totalAdditionalWeight?: number;
+          requiredRatio?: number;
+          declarationId?: string;
+          startNumber?: string;
+          declarationDate?: string | Date;
+          isWithinLimit?: boolean;
+        };
+
+        try {
+          metadata = JSON.parse(measurement.metadata) as typeof metadata;
+        } catch {
+          return;
+        }
+
+        if (!metadata?.declaredPower || !metadata?.declaredClass) {
+          return;
+        }
+
         const ratio = calculateWeightPowerRatio(
           measurement.measuredWeight,
           metadata.declaredPower,
           metadata.declaredClass,
-          metadata.isTurbo,
+          metadata.isTurbo ?? false,
           metadata.totalAdditionalWeight
         );
 
@@ -186,16 +205,16 @@ export default async function CarDetailsPage({
             measuredWeight: measurement.measuredWeight,
             declaredPower: metadata.declaredPower,
             ratio,
-            requiredRatio: metadata.requiredRatio,
+            requiredRatio: metadata.requiredRatio ?? ratio,
             source: "weight",
             measuredBy: measurement.measuredBy,
-            declarationId: metadata.declarationId,
-            declarationStartNumber: metadata.startNumber,
+            declarationId: metadata.declarationId ?? measurement.declaration.id,
+            declarationStartNumber: metadata.startNumber ?? measurement.declaration.startNumber,
             declarationClass: metadata.declaredClass,
-            declarationDate: new Date(metadata.declarationDate),
-            isTurbo: metadata.isTurbo,
-            totalAdditionalWeight: metadata.totalAdditionalWeight,
-            isWithinLimit: metadata.isWithinLimit
+            declarationDate: parseValidDate(metadata.declarationDate, measurement.createdAt),
+            isTurbo: metadata.isTurbo ?? false,
+            totalAdditionalWeight: metadata.totalAdditionalWeight ?? 0,
+            isWithinLimit: metadata.isWithinLimit ?? true
           });
         }
       }

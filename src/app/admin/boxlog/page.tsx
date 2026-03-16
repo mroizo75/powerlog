@@ -122,7 +122,7 @@ export default function BoxLogPage() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "POWERLOG") {
+    } else if (session?.user?.role !== "ADMIN" && session?.user?.role !== "POWERLOG" && session?.user?.role !== "VEKTREG") {
       router.push("/");
     }
   }, [status, session, router]);
@@ -137,7 +137,7 @@ export default function BoxLogPage() {
   }
 
   // Ikke vis noe hvis brukeren ikke er admin
-  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "POWERLOG")) {
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "POWERLOG" && session.user.role !== "VEKTREG")) {
     return null;
   }
 

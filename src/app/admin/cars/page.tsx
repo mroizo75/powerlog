@@ -11,7 +11,7 @@ export default async function CarsPage() {
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== "ADMIN" && session.user.role !== "TEKNISK") {
     redirect("/");
   }
 
