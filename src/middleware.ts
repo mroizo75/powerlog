@@ -4,12 +4,14 @@ import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   try {
-    // Hvis det er en API-rute eller statisk fil, la den gå videre
+    const { pathname } = request.nextUrl;
+
     if (
-      request.nextUrl.pathname.startsWith("/api") ||
-      request.nextUrl.pathname.startsWith("/_next") ||
-      request.nextUrl.pathname.startsWith("/static") ||
-      request.nextUrl.pathname.includes(".")
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/static") ||
+      pathname === "/login" ||
+      pathname.includes(".")
     ) {
       return NextResponse.next();
     }
@@ -72,6 +74,9 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch {
+    if (request.nextUrl.pathname === "/login") {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 }
