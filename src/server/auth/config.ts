@@ -53,7 +53,6 @@ export const authConfig = {
           throw new Error("Feil passord");
         }
 
-        console.log("Bruker autorisert:", { id: user.id, email: user.email, role: user.role });
         return {
           id: user.id,
           email: user.email,
@@ -63,32 +62,25 @@ export const authConfig = {
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET,
   trustHost: true,
   basePath: "/api/auth",
   callbacks: {
     jwt: async ({ token, user }) => {
-      console.log("JWT callback - Token før:", token);
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
-      console.log("JWT callback - Token etter:", token);
       return token;
     },
-    session: ({ session, token }) => {
-      console.log("Session callback - Session før:", session);
-      const newSession = {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id as string,
-          role: token.role as string,
-        },
-      };
-      console.log("Session callback - Session etter:", newSession);
-      return newSession;
-    },
+    session: ({ session, token }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: token.id as string,
+        role: token.role as string,
+      },
+    }),
   },
   pages: {
     signIn: "/login",
