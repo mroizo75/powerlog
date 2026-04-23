@@ -5,16 +5,15 @@ import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface DeleteDeclarationButtonProps {
   declarationId: string;
@@ -45,10 +44,10 @@ export default function DeleteDeclarationButton({ declarationId, carId, variant 
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         {variant === 'link' ? (
-          <button className="text-red-600 hover:text-red-900 transition-colors">
+          <button className="text-red-600 transition-colors hover:text-red-900">
             Slett
           </button>
         ) : (
@@ -56,25 +55,27 @@ export default function DeleteDeclarationButton({ declarationId, carId, variant 
             Slett selvangivelse
           </button>
         )}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Slett selvangivelse?</AlertDialogTitle>
-          <AlertDialogDescription>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Slett selvangivelse?</DialogTitle>
+          <DialogDescription>
             Dette vil permanent slette selvangivelsen og alle tilhørende data (vektmålinger, rapporter, powerlog-målinger). Denne handlingen kan ikke angres.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleteDeclaration.isPending}>Avbryt</AlertDialogCancel>
-          <AlertDialogAction
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleteDeclaration.isPending}>
+            Avbryt
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={deleteDeclaration.isPending}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
           >
             {deleteDeclaration.isPending ? "Sletter..." : "Ja, slett"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
