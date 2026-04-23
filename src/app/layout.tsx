@@ -7,6 +7,7 @@ import { SessionProvider } from "next-auth/react";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Powerlog",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className={cn("min-h-screen bg-background font-sans antialiased", geist.variable, inter.className)}>
         <SessionProvider>
           <TRPCReactProvider>{children}</TRPCReactProvider>
+          <Toaster richColors position="top-center" />
         </SessionProvider>
       </body>
     </html>

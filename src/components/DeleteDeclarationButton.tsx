@@ -1,7 +1,20 @@
 'use client';
 
+import { useState } from "react";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface DeleteDeclarationButtonProps {
   declarationId: string;
@@ -11,43 +24,57 @@ interface DeleteDeclarationButtonProps {
 
 export default function DeleteDeclarationButton({ declarationId, carId, variant = 'button' }: DeleteDeclarationButtonProps) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+
   const deleteDeclaration = api.declaration.delete.useMutation({
     onSuccess: () => {
-      window.location.reload();
+      setOpen(false);
+      toast.success("Selvangivelsen ble slettet");
+      router.refresh();
     },
     onError: (error) => {
-      console.error("Feil ved sletting av selvangivelse:", error);
-      alert(error.message);
+      setOpen(false);
+      toast.error("Kunne ikke slette selvangivelsen", {
+        description: error.message,
+      });
     },
   });
 
-  const handleDelete = async () => {
-    if (window.confirm('Er du sikker på at du vil slette denne selvangivelsen?')) {
-      try {
-        await deleteDeclaration.mutate(declarationId);
-      } catch (error) {
-        console.error("Feil ved sletting av selvangivelse:", error);
-      }
-    }
+  const handleDelete = () => {
+    deleteDeclaration.mutate(declarationId);
   };
 
-  if (variant === 'link') {
-    return (
-      <button
-        onClick={handleDelete}
-        className="text-red-600 hover:text-red-900"
-      >
-        Slett
-      </button>
-    );
-  }
-
   return (
-    <button
-      onClick={handleDelete}
-      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-    >
-      Slett selvangivelse
-    </button>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        {variant === 'link' ? (
+          <button className="text-red-600 hover:text-red-900 transition-colors">
+            Slett
+          </button>
+        ) : (
+          <button className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
+            Slett selvangivelse
+          </button>
+        )}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Slett selvangivelse?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Dette vil permanent slette selvangivelsen og alle tilhørende data (vektmålinger, rapporter, powerlog-målinger). Denne handlingen kan ikke angres.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleteDeclaration.isPending}>Avbryt</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={deleteDeclaration.isPending}
+            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+          >
+            {deleteDeclaration.isPending ? "Sletter..." : "Ja, slett"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
-} 
+}
