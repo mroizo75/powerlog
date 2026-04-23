@@ -344,10 +344,6 @@ export const declarationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const declaration = await ctx.db.declaration.findUnique({
         where: { id: input },
-        include: {
-          weightMeasurements: true,
-          weightAdditions: true,
-        },
       });
 
       if (!declaration) {
@@ -357,42 +353,39 @@ export const declarationRouter = createTRPCRouter({
         });
       }
 
-      // Sjekk om dette er den eneste selvangivelsen for dette startnummeret
-      const otherDeclarations = await ctx.db.declaration.findMany({
-        where: {
-          startNumber: declaration.startNumber,
-          declaredClass: declaration.declaredClass,
-          id: { not: declaration.id },
-        },
-      });
-
-      // Hvis dette er den eneste selvangivelsen, ikke slett den
-      if (otherDeclarations.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Kan ikke slette den eneste selvangivelsen for dette startnummeret",
+      return ctx.db.$transaction(async (tx) => {
+        await tx.weightMeasurement.deleteMany({
+          where: { declarationId: declaration.id },
         });
-      }
 
-      // Finn den nyeste andre selvangivelsen
-      const latestOtherDeclaration = otherDeclarations.reduce((latest, current) => 
-        new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
-      );
+        await tx.powerlog.deleteMany({
+          where: { declarationId: declaration.id },
+        });
 
-      // Oppdater alle vektmålinger til å bruke den nyeste andre selvangivelsen
-      await ctx.db.weightMeasurement.updateMany({
-        where: { declarationId: declaration.id },
-        data: { declarationId: latestOtherDeclaration.id },
-      });
+        await tx.report.deleteMany({
+          where: { declarationId: declaration.id },
+        });
 
-      // Slett tilleggsvekter
-      await ctx.db.weightAddition.deleteMany({
-        where: { declarationId: declaration.id },
-      });
+        await tx.boxLog.updateMany({
+          where: { declarationId: declaration.id },
+          data: { declarationId: null },
+        });
 
-      // Slett selvangivelsen
-      return ctx.db.declaration.delete({
-        where: { id: input },
+        await tx.archivedReport.deleteMany({
+          where: { declarationId: declaration.id },
+        });
+
+        await tx.archivedWeightMeasurement.deleteMany({
+          where: { declarationId: declaration.id },
+        });
+
+        await tx.weightAddition.deleteMany({
+          where: { declarationId: declaration.id },
+        });
+
+        return tx.declaration.delete({
+          where: { id: declaration.id },
+        });
       });
     }),
 }); 
