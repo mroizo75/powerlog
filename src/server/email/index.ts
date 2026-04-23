@@ -35,7 +35,7 @@ export class EmailService {
       const ratio = declaredWeight / declaredPower;
       
       const result = await resend.emails.send({
-        from: 'noreply@powerlogg.no',
+        from: 'noreply@powerlog.no',
         to,
         subject: `Kvittering på selvangivelse #${startNumber}`,
         html: `
