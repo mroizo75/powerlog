@@ -13,6 +13,9 @@ interface ReportDetails {
   nullPoint?: number;
   effectivePower?: number;
   actualRatio?: number;
+  declarationUpdatedAt?: string;
+  weightRegisteredAt?: string;
+  reportGeneratedAt?: string;
 }
 
 interface ReportPDFProps {
@@ -126,6 +129,14 @@ const styles = StyleSheet.create({
   },
 });
 
+function formatTimestamp(isoString?: string): string {
+  if (!isoString) return "-";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "-";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} kl. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const ReportPDF = ({ report, details, declaration }: ReportPDFProps) => {
   const isFromPowerlog = report.source === "POWERLOG";
   const effectivePower = isFromPowerlog 
@@ -141,6 +152,15 @@ const ReportPDF = ({ report, details, declaration }: ReportPDFProps) => {
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text>Vekt/Effekt Ratio Rapport</Text>
+        </View>
+
+        <View style={{ margin: 10, padding: 10, backgroundColor: "#F9F9F9", borderWidth: 1, borderColor: "#CCC", borderRadius: 5 }}>
+          <Text style={{ fontSize: 12, fontWeight: "bold", marginBottom: 5 }}>Tidsstempler</Text>
+          <Text style={styles.text}>Selvangivelse sist endret: {formatTimestamp(details.declarationUpdatedAt)}</Text>
+          {details.weightRegisteredAt && (
+            <Text style={styles.text}>Vekt registrert: {formatTimestamp(details.weightRegisteredAt)}</Text>
+          )}
+          <Text style={styles.text}>Rapport generert: {formatTimestamp(details.reportGeneratedAt ?? report.createdAt)}</Text>
         </View>
 
         <View style={styles.section}>

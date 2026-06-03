@@ -42,10 +42,13 @@ export const reportRouter = createTRPCRouter({
       }
 
       try {
-        // Konverter details til JSON-streng før lagring
-        const detailsString = JSON.stringify(input.details);
-        
-        // Opprett rapport
+        const enrichedDetails = {
+          ...input.details,
+          declarationUpdatedAt: declaration.updatedAt,
+          reportGeneratedAt: new Date().toISOString(),
+        };
+        const detailsString = JSON.stringify(enrichedDetails);
+
         const report = await ctx.db.report.create({
           data: {
             type: input.type,

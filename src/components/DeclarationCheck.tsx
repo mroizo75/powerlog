@@ -103,6 +103,9 @@ export default function DeclarationCheck({ declarations: propDeclarations }: Dec
                 Registrert
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                Sist endret
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                 Status
               </th>
             </tr>
@@ -131,6 +134,11 @@ export default function DeclarationCheck({ declarations: propDeclarations }: Dec
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {format(declarationDate, "dd.MM.yyyy HH:mm", { locale: nb })}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {declaration.updatedAt
+                      ? format(new Date(declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })
+                      : "-"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="text-sm text-gray-900">

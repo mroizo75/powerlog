@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { api } from "@/trpc/react";
+import { format } from "date-fns";
+import { nb } from "date-fns/locale";
 import WeightAdditions from "./WeightAdditions";
 import { DeclarationClass, CLASS_LIMITS, type DeclarationClassType } from "@/types/declaration";
 
@@ -286,6 +288,9 @@ export default function WeightRegistration() {
                   )}
                   {declaration.declaredPower && (
                     <p>Angitt effekt: {declaration.declaredPower} hk</p>
+                  )}
+                  {declaration.updatedAt && (
+                    <p>Sist endret: {format(new Date(declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}</p>
                   )}
                   {declaration.isTurbo && (
                     <p className="text-blue-900 font-medium">Turbo-variant</p>

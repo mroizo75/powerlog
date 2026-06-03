@@ -82,6 +82,7 @@ export const weightRouter = createTRPCRouter({
             requiredRatio,
             isWithinLimit,
             declarationDate: declaration.createdAt,
+            declarationUpdatedAt: declaration.updatedAt,
           }),
         },
       });
@@ -114,6 +115,9 @@ export const weightRouter = createTRPCRouter({
                 requiredRatio,
                 carInfo: `${declaration.car.make} ${declaration.car.model} (${declaration.car.year})`,
                 startNumber: declaration.startNumber,
+                declarationUpdatedAt: declaration.updatedAt,
+                weightRegisteredAt: new Date().toISOString(),
+                reportGeneratedAt: new Date().toISOString(),
               }),
               declarationId: input.declarationId,
               createdById: ctx.session.user.id,

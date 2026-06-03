@@ -129,10 +129,28 @@ model Declaration {
     user            User?            @relation(fields: [userId], references: [id])
     archivedReports ArchivedReport[]
     archivedWeightMeasurements ArchivedWeightMeasurement[]
+    auditLogs       DeclarationAuditLog[]
 
     @@index([carId])
     @@index([userId])
     @@index([email])
+}
+
+model DeclarationAuditLog {
+    id               String      @id @default(cuid())
+    createdAt        DateTime    @default(now())
+    declarationId    String
+    startNumber      String
+    action           String      // "CREATED" | "UPDATED"
+    previousValues   String?     @db.Text
+    newValues        String      @db.Text
+    changedFields    String?     @db.Text
+    submittedByEmail String?
+
+    declaration      Declaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+
+    @@index([declarationId])
+    @@index([startNumber])
 }
 
 model WeightAddition {

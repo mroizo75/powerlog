@@ -14,6 +14,7 @@ interface DeclarationWithCar {
   declaredWeight: number | null;
   declaredPower: number | null;
   createdAt: Date;
+  updatedAt: Date;
   car: {
     make: string;
     model: string;
@@ -216,6 +217,9 @@ export default function WeightList() {
                 <th className="px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 md:px-4">
                   Vektmåling
                 </th>
+                <th className="hidden px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 md:px-4 xl:table-cell">
+                  Sist endret
+                </th>
                 <th className="px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 md:px-4">
                   Status
                 </th>
@@ -273,6 +277,11 @@ export default function WeightList() {
                           <span className="text-gray-500">Ingen målinger</span>
                         )}
                       </td>
+                      <td className="hidden px-2 py-3 align-top text-xs text-gray-500 md:px-4 md:text-sm xl:table-cell">
+                        {item.updatedAt
+                          ? format(new Date(item.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })
+                          : "-"}
+                      </td>
                       <td className="px-2 py-3 align-top text-xs text-gray-900 md:px-4 md:text-sm">
                         <div className="flex items-center space-x-2">
                           <div className={`h-4 w-4 rounded-full ${isOk ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -323,6 +332,11 @@ export default function WeightList() {
                           {format(new Date(measurement.createdAt), "dd.MM.yyyy HH:mm:ss", { locale: nb })}
                         </p>
                       </div>
+                    </td>
+                    <td className="hidden px-2 py-3 align-top text-xs text-gray-500 md:px-4 md:text-sm xl:table-cell">
+                      {measurement.declaration.updatedAt
+                        ? format(new Date(measurement.declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })
+                        : "-"}
                     </td>
                     <td className="px-2 py-3 align-top text-xs text-gray-900 md:px-4 md:text-sm">
                       <div className="flex items-center space-x-2">

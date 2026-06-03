@@ -23,6 +23,7 @@ interface Car {
     declaredWeight: number | null;
     declaredPower: number | null;
     isTurbo: boolean;
+    updatedAt: Date;
   }[];
 }
 
@@ -106,6 +107,9 @@ export default function CarsTable({ cars }: CarsTableProps) {
                     Insendt
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Sist endret
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Handlinger
                   </th>
                 </tr>
@@ -140,6 +144,11 @@ export default function CarsTable({ cars }: CarsTableProps) {
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                         {new Date(lastDeclaration.createdAt).toLocaleDateString("nb-NO")}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {lastDeclaration.updatedAt
+                          ? format(new Date(lastDeclaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })
+                          : "-"}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                         <button

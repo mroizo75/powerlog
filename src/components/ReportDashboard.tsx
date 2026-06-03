@@ -639,6 +639,11 @@ export default function ReportDashboard() {
                               <p className="text-sm text-gray-500">
                                 Generert: {format(new Date(report.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                               </p>
+                              {report.updatedAt && (
+                                <p className="text-sm text-gray-500">
+                                  Sist endret: {format(new Date(report.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}
+                                </p>
+                              )}
                               {report.type === "WEIGHT_POWER_RATIO" && (
                                 <div className="mt-2 text-sm text-gray-600">
                                   <div className="grid grid-cols-2 gap-4">

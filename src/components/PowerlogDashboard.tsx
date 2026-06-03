@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { api } from "@/trpc/react";
+import { format } from "date-fns";
+import { nb } from "date-fns/locale";
 import { type Powerlog, type WeightMeasurement, type Declaration } from "@prisma/client";
 import { type TRPCClientErrorLike } from "@trpc/client";
 import { type DeclarationClass } from "@/types/declaration";
@@ -455,8 +457,11 @@ export default function PowerlogDashboard() {
                         <th className="w-[10%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                           Status
                         </th>
-                        <th className="w-[14%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        <th className="w-[12%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                           Tidspunkt
+                        </th>
+                        <th className="w-[12%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                          Sist endret
                         </th>
                         <th className="w-[14%] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                           Aksjoner
@@ -516,6 +521,9 @@ export default function PowerlogDashboard() {
                             </td>
                             <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                               {new Date(log.createdAt).toLocaleString("nb-NO")}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                              {format(new Date(log.declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                             </td>
                             <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                               <div className="flex space-x-2">

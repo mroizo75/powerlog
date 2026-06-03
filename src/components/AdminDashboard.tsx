@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
+import { nb } from "date-fns/locale";
 import { api } from "@/trpc/react";
 import AdminNav from "./AdminNav";
 
@@ -97,6 +99,9 @@ export default function AdminDashboard() {
                         Insendt
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Sist endret
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Handlinger
                       </th>
                     </tr>
@@ -121,6 +126,9 @@ export default function AdminDashboard() {
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                           {new Date(declaration.createdAt).toLocaleDateString("nb-NO")}
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                          {format(new Date(declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                           <button

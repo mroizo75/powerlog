@@ -238,7 +238,15 @@ export default async function CarDetailsPage({
         {lastDeclaration && (
           <div className="mb-8 rounded-lg bg-white p-6 shadow">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Siste selvangivelse</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Siste selvangivelse</h2>
+                <a
+                  href={`/admin/audit/${lastDeclaration.startNumber}`}
+                  className="rounded bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                >
+                  Vis endringslogg
+                </a>
+              </div>
               <DeleteDeclarationButton declarationId={lastDeclaration.id} carId={car.id} />
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -276,6 +284,12 @@ export default async function CarDetailsPage({
                     lastDeclaration.isTurbo,
                     getTotalAdditionalWeight(lastDeclaration)
                   ) || "-"} kg/hk
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Sist endret</p>
+                <p className="text-lg font-medium">
+                  {format(new Date(lastDeclaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                 </p>
               </div>
               <div>
@@ -322,6 +336,9 @@ export default async function CarDetailsPage({
                       Dato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Sist endret
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Startnummer
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -364,6 +381,9 @@ export default async function CarDetailsPage({
                         <tr key={declaration.id}>
                           <td className="whitespace-nowrap px-6 py-4">
                             {format(new Date(declaration.createdAt), "dd.MM.yyyy HH:mm", { locale: nb })}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            {format(new Date(declaration.updatedAt), "dd.MM.yyyy HH:mm", { locale: nb })}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4">{declaration.startNumber}</td>
                           <td className="whitespace-nowrap px-6 py-4">{declaration.declaredClass}</td>
